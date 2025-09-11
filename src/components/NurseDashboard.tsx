@@ -11,7 +11,7 @@ import MobileOverview from './MobileOverview';
 
 export default function NurseDashboard() {
   const [data, setData] = useState<AppData>(DataService.loadData());
-  const [activeTab, setActiveTab] = useState<'recent' | 'overview' | 'analytics' | 'profile'>('recent');
+  const [activeTab, setActiveTab] = useState<'recent' | 'overview' | 'analytics' | 'profile'>('profile');
 
   const refreshData = () => {
     setData(DataService.loadData());

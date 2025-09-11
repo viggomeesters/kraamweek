@@ -18,7 +18,7 @@ const createTimestamp = (date: string, time: string) => new Date(`${date}T${time
 export default function ParentDashboard() {
   const [data, setData] = useState<AppData>(DataService.loadData());
   const [activeForm, setActiveForm] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'recent' | 'overview' | 'analytics' | 'profile'>('recent');
+  const [activeTab, setActiveTab] = useState<'recent' | 'overview' | 'analytics' | 'profile'>('profile');
 
   const refreshData = () => {
     setData(DataService.loadData());
