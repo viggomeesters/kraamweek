@@ -1243,6 +1243,7 @@ function RecordItem({ record }: RecordItemProps) {
     const time = new Date(record.timestamp).toLocaleTimeString('nl-NL', {
       hour: '2-digit',
       minute: '2-digit',
+      hour12: false,
     });
     const date = new Date(record.timestamp).toLocaleDateString('nl-NL');
 

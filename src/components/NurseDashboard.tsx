@@ -145,7 +145,7 @@ function AlertItem({ alert, onAcknowledge }: AlertItemProps) {
             <span className="font-medium">{alert.message}</span>
           </div>
           <div className="text-sm opacity-75">
-            {new Date(alert.timestamp).toLocaleString('nl-NL')}
+            {new Date(alert.timestamp).toLocaleString('nl-NL', { hour12: false })}
           </div>
         </div>
         
@@ -188,7 +188,7 @@ function AlertItem({ alert, onAcknowledge }: AlertItemProps) {
         <span className="text-lg">{getAlertIcon()}</span>
         <span className="font-medium">{alert.message}</span>
         <span className="text-xs opacity-75">
-          {new Date(alert.timestamp).toLocaleString('nl-NL')}
+          {new Date(alert.timestamp).toLocaleString('nl-NL', { hour12: false })}
         </span>
       </div>
       <button
@@ -223,7 +223,7 @@ function ResolvedAlertItem({ alert }: ResolvedAlertItemProps) {
           <div className="flex-1">
             <div className="font-medium">{alert.message}</div>
             <div className="text-xs opacity-75 mt-1">
-              Afgehandeld op {new Date(alert.acknowledgedAt || '').toLocaleString('nl-NL')} door {alert.acknowledgedBy}
+              Afgehandeld op {new Date(alert.acknowledgedAt || '').toLocaleString('nl-NL', { hour12: false })} door {alert.acknowledgedBy}
             </div>
             {alert.resolutionComment && (
               <div className="mt-2 p-2 bg-green-200 rounded text-sm">
@@ -466,7 +466,7 @@ function BabyOverview({ records }: BabyOverviewProps) {
                     </div>
                   </div>
                   <div className="text-right text-sm text-gray-500">
-                    <div>{new Date(record.timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}</div>
+                    <div>{new Date(record.timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
                     <div>{new Date(record.timestamp).toLocaleDateString('nl-NL')}</div>
                   </div>
                 </div>
@@ -545,7 +545,7 @@ function MotherSection({ records, onRefresh }: MotherSectionProps) {
                     </div>
                   </div>
                   <div className="text-right text-sm text-gray-500">
-                    <div>{new Date(record.timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}</div>
+                    <div>{new Date(record.timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
                     <div>{new Date(record.timestamp).toLocaleDateString('nl-NL')}</div>
                   </div>
                 </div>
@@ -813,7 +813,7 @@ function ObservationsSection({ observations, onRefresh }: ObservationsSectionPro
                     )}
                   </div>
                   <div className="text-right text-sm text-gray-500">
-                    <div>{new Date(observation.timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}</div>
+                    <div>{new Date(observation.timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
                     <div>{new Date(observation.timestamp).toLocaleDateString('nl-NL')}</div>
                   </div>
                 </div>
