@@ -422,12 +422,16 @@ export class DataService {
     const dailyTemps: Record<string, number[]> = {};
     
     tempRecords.forEach(record => {
-      if (record.value && typeof record.value === 'number') {
-        const date = record.timestamp.split('T')[0];
-        if (!dailyTemps[date]) {
-          dailyTemps[date] = [];
+      if (record.value) {
+        // Convert value to number if it's a string
+        const temp = typeof record.value === 'string' ? parseFloat(record.value) : record.value;
+        if (!isNaN(temp)) {
+          const date = record.timestamp.split('T')[0];
+          if (!dailyTemps[date]) {
+            dailyTemps[date] = [];
+          }
+          dailyTemps[date].push(temp);
         }
-        dailyTemps[date].push(record.value);
       }
     });
     

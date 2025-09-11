@@ -1616,8 +1616,22 @@ function SimpleLineChart({ data, metric }: SimpleLineChartProps) {
   const yMin = Math.max(0, minValue - valueRange * 0.1);
   const yMax = maxValue + valueRange * 0.1;
   
-  // Create points for the line
-  const points = data.map((d, i) => {
+  // Create points for the line - only use data points with valid values
+  const validDataPoints = data.filter(d => {
+    const value = (() => {
+      switch (valueKey) {
+        case 'count': return d.count;
+        case 'weight': return d.weight;
+        case 'temperature': return d.temperature;
+        case 'painLevel': return d.painLevel;
+        case 'duration': return d.duration;
+        default: return 0;
+      }
+    })();
+    return value != null && !isNaN(value) && isFinite(value);
+  });
+  
+  const points = validDataPoints.map((d, i) => {
     const value = (() => {
       switch (valueKey) {
         case 'count': return d.count || 0;
@@ -1629,9 +1643,14 @@ function SimpleLineChart({ data, metric }: SimpleLineChartProps) {
       }
     })();
     
-    const x = (i / (data.length - 1)) * chartWidth;
+    const x = validDataPoints.length > 1 ? (i / (validDataPoints.length - 1)) * chartWidth : chartWidth / 2;
     const y = chartHeight - ((value - yMin) / (yMax - yMin)) * chartHeight;
-    return { x, y, date: d.date, value };
+    
+    // Ensure values are finite
+    const safeX = isFinite(x) ? x : chartWidth / 2;
+    const safeY = isFinite(y) ? y : chartHeight / 2;
+    
+    return { x: safeX, y: safeY, date: d.date, value };
   });
   
   // Create SVG path
