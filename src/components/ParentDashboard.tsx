@@ -335,6 +335,55 @@ function TemperatureForm({ onSubmit, onCancel }: FormProps) {
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(getCurrentDate);
   const [time, setTime] = useState(getCurrentTime);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertData, setAlertData] = useState<{
+    type: 'high' | 'low';
+    message: string;
+    advice: string[];
+  } | null>(null);
+
+  const checkTemperatureAlert = (temp: number) => {
+    if (temp >= 37.6) {
+      setAlertData({
+        type: 'high',
+        message: 'Let op: je baby heeft koorts!',
+        advice: [
+          'Controleer de temperatuur opnieuw na 15-30 minuten',
+          'Zorg dat je baby niet te warm aangekleed is',
+          'Geef extra vocht (borstvoeding of flesvoeding)',
+          'Neem contact op met de kraamhulp of huisarts',
+          'Bij koorts boven 38°C: direct contact opnemen met arts',
+          'Let op tekenen van ziekte: prikkelbaarheid, slapheid, voeding weigeren'
+        ]
+      });
+      setShowAlert(true);
+    } else if (temp < 36.0) {
+      setAlertData({
+        type: 'low',
+        message: 'Let op: je baby is te koud!',
+        advice: [
+          'Controleer of baby warm genoeg aangekleed is',
+          'Zet een mutsje op',
+          'Trek warme sokjes aan',
+          'Leg een extra dekentje over baby heen',
+          'Controleer de kamertemperaat (ideaal: 18-20°C)',
+          'Neem contact op met kraamhulp indien temperatuur onder 35.5°C',
+          'Bij aanhoudende lage temperatuur: contact opnemen met arts'
+        ]
+      });
+      setShowAlert(true);
+    }
+  };
+
+  const handleTemperatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setTemperature(value);
+    
+    // Check for alerts when user enters temperature
+    if (value && !isNaN(parseFloat(value))) {
+      checkTemperatureAlert(parseFloat(value));
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -347,8 +396,9 @@ function TemperatureForm({ onSubmit, onCancel }: FormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <h3 className="text-lg font-medium">Temperatuur meten</h3>
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <h3 className="text-lg font-medium">Temperatuur meten</h3>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Temperatuur (°C)
@@ -357,7 +407,7 @@ function TemperatureForm({ onSubmit, onCancel }: FormProps) {
           type="number"
           step="0.1"
           value={temperature}
-          onChange={(e) => setTemperature(e.target.value)}
+          onChange={handleTemperatureChange}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
           min="30"
           max="42"
@@ -417,6 +467,42 @@ function TemperatureForm({ onSubmit, onCancel }: FormProps) {
         </button>
       </div>
     </form>
+
+    {/* Temperature Alert Modal */}
+    {showAlert && alertData && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-96 overflow-y-auto">
+          <div className={`p-4 rounded-t-lg ${alertData.type === 'high' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+            <div className="flex items-center">
+              <span className="text-2xl mr-2">
+                {alertData.type === 'high' ? '🌡️🔥' : '🌡️❄️'}
+              </span>
+              <h3 className="text-lg font-semibold">{alertData.message}</h3>
+            </div>
+          </div>
+          <div className="p-4">
+            <h4 className="font-medium text-gray-900 mb-3">Wat kun je doen:</h4>
+            <ul className="space-y-2">
+              {alertData.advice.map((item, index) => (
+                <li key={index} className="flex items-start">
+                  <span className="text-indigo-600 mr-2 flex-shrink-0">•</span>
+                  <span className="text-sm text-gray-700">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="p-4 bg-gray-50 rounded-b-lg flex justify-end">
+            <button
+              onClick={() => setShowAlert(false)}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              Begrepen
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
