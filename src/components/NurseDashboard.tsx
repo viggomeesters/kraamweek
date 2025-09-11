@@ -66,11 +66,12 @@ export default function NurseDashboard() {
             { id: 'mother', label: 'Moeder', icon: '👩' },
             { id: 'observations', label: 'Observaties', icon: '📋' },
             { id: 'tasks', label: 'Taken', icon: '✅' },
+            { id: 'alert_history', label: 'Waarschuwingen Geschiedenis', icon: '📊' },
             { id: 'profile', label: 'Baby Profiel', icon: '📄' },
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as 'overview' | 'mother' | 'observations' | 'tasks' | 'profile')}
+              onClick={() => setActiveTab(tab.id as 'overview' | 'mother' | 'observations' | 'tasks' | 'alert_history' | 'profile')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
                   ? 'border-indigo-500 text-indigo-600'
@@ -95,6 +96,9 @@ export default function NurseDashboard() {
       )}
       {activeTab === 'tasks' && (
         <TasksSection tasks={data.tasks} onRefresh={refreshData} />
+      )}
+      {activeTab === 'alert_history' && (
+        <AlertHistorySection alerts={data.alerts} />
       )}
       {activeTab === 'profile' && (
         <BabyProfileSection onRefresh={refreshData} />
@@ -1410,6 +1414,376 @@ function JaundiceAssessmentForm({ onSubmit, onCancel }: JaundiceAssessmentFormPr
         </button>
       </div>
     </form>
+  );
+}
+
+// Alert History Components
+interface AlertHistorySectionProps {
+  alerts: Alert[];
+}
+
+function AlertHistorySection({ alerts }: AlertHistorySectionProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'warning' | 'critical' | 'info'>('all');
+  const [filterCategory, setFilterCategory] = useState<'all' | 'baby' | 'mother' | 'general'>('all');
+  const [sortBy, setSortBy] = useState<'date' | 'type' | 'category'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  // Filter acknowledged alerts only
+  const acknowledgedAlerts = alerts.filter(alert => alert.acknowledged);
+
+  // Apply filters
+  const filteredAlerts = acknowledgedAlerts.filter(alert => {
+    const matchesSearch = !searchTerm || 
+      alert.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (alert.resolutionComment && alert.resolutionComment.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesType = filterType === 'all' || alert.type === filterType;
+    const matchesCategory = filterCategory === 'all' || alert.category === filterCategory;
+    
+    return matchesSearch && matchesType && matchesCategory;
+  });
+
+  // Sort alerts
+  const sortedAlerts = [...filteredAlerts].sort((a, b) => {
+    let comparison = 0;
+    
+    switch (sortBy) {
+      case 'date':
+        comparison = new Date(a.acknowledgedAt || '').getTime() - new Date(b.acknowledgedAt || '').getTime();
+        break;
+      case 'type':
+        const typeOrder = { 'critical': 3, 'warning': 2, 'info': 1 };
+        comparison = typeOrder[a.type] - typeOrder[b.type];
+        break;
+      case 'category':
+        comparison = a.category.localeCompare(b.category);
+        break;
+    }
+    
+    return sortOrder === 'desc' ? -comparison : comparison;
+  });
+
+  // Statistics
+  const stats = {
+    total: acknowledgedAlerts.length,
+    critical: acknowledgedAlerts.filter(a => a.type === 'critical').length,
+    warning: acknowledgedAlerts.filter(a => a.type === 'warning').length,
+    info: acknowledgedAlerts.filter(a => a.type === 'info').length,
+    baby: acknowledgedAlerts.filter(a => a.category === 'baby').length,
+    mother: acknowledgedAlerts.filter(a => a.category === 'mother').length,
+    general: acknowledgedAlerts.filter(a => a.category === 'general').length,
+  };
+
+  // Get alerts from last 7 days
+  const last7Days = new Date();
+  last7Days.setDate(last7Days.getDate() - 7);
+  const recentAlerts = acknowledgedAlerts.filter(a => 
+    new Date(a.acknowledgedAt || '') >= last7Days
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-semibold text-gray-900">Waarschuwingen Geschiedenis</h3>
+        <div className="text-sm text-gray-500">
+          Totaal {stats.total} afgehandelde waarschuwingen
+        </div>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg shadow-md p-4">
+          <div className="text-2xl mb-2">📊</div>
+          <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
+          <div className="text-sm text-gray-600">Totaal afgehandeld</div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-md p-4">
+          <div className="text-2xl mb-2">🚨</div>
+          <div className="text-2xl font-bold text-red-600">{stats.critical}</div>
+          <div className="text-sm text-gray-600">Kritieke waarschuwingen</div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-md p-4">
+          <div className="text-2xl mb-2">⚠️</div>
+          <div className="text-2xl font-bold text-yellow-600">{stats.warning}</div>
+          <div className="text-sm text-gray-600">Waarschuwingen</div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-md p-4">
+          <div className="text-2xl mb-2">📅</div>
+          <div className="text-2xl font-bold text-blue-600">{recentAlerts.length}</div>
+          <div className="text-sm text-gray-600">Laatste 7 dagen</div>
+        </div>
+      </div>
+
+      {/* Category Breakdown */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg shadow-md p-4">
+          <div className="flex items-center space-x-2 mb-2">
+            <span className="text-xl">👶</span>
+            <span className="font-medium text-gray-900">Baby gerelateerd</span>
+          </div>
+          <div className="text-xl font-bold text-gray-900">{stats.baby}</div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-md p-4">
+          <div className="flex items-center space-x-2 mb-2">
+            <span className="text-xl">👩</span>
+            <span className="font-medium text-gray-900">Moeder gerelateerd</span>
+          </div>
+          <div className="text-xl font-bold text-gray-900">{stats.mother}</div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-md p-4">
+          <div className="flex items-center space-x-2 mb-2">
+            <span className="text-xl">📋</span>
+            <span className="font-medium text-gray-900">Algemeen</span>
+          </div>
+          <div className="text-xl font-bold text-gray-900">{stats.general}</div>
+        </div>
+      </div>
+
+      {/* Filters and Search */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h4 className="text-lg font-medium text-gray-900 mb-4">Filters en Zoeken</h4>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Zoeken
+            </label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Zoek in berichten..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Type
+            </label>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value as 'all' | 'warning' | 'critical' | 'info')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="all">Alle types</option>
+              <option value="critical">Kritiek</option>
+              <option value="warning">Waarschuwing</option>
+              <option value="info">Info</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Categorie
+            </label>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value as 'all' | 'baby' | 'mother' | 'general')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="all">Alle categorieën</option>
+              <option value="baby">Baby</option>
+              <option value="mother">Moeder</option>
+              <option value="general">Algemeen</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Sorteer op
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'date' | 'type' | 'category')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="date">Datum</option>
+              <option value="type">Type</option>
+              <option value="category">Categorie</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Volgorde
+            </label>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="desc">Nieuwste eerst</option>
+              <option value="asc">Oudste eerst</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Alert History List */}
+      <div className="bg-white rounded-lg shadow-md">
+        <div className="p-6 border-b border-gray-200">
+          <h4 className="font-semibold text-gray-900">
+            Alle afgehandelde waarschuwingen ({sortedAlerts.length})
+          </h4>
+        </div>
+        
+        {sortedAlerts.length === 0 ? (
+          <div className="p-8 text-center">
+            {acknowledgedAlerts.length === 0 ? (
+              <div>
+                <div className="text-6xl mb-4">✅</div>
+                <h4 className="text-lg font-medium text-gray-900 mb-2">Geen afgehandelde waarschuwingen</h4>
+                <p className="text-gray-600">Er zijn nog geen waarschuwingen afgehandeld.</p>
+              </div>
+            ) : (
+              <div>
+                <div className="text-6xl mb-4">🔍</div>
+                <h4 className="text-lg font-medium text-gray-900 mb-2">Geen resultaten gevonden</h4>
+                <p className="text-gray-600">Probeer je zoekopdracht of filters aan te passen.</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {sortedAlerts.map((alert) => (
+              <AlertHistoryItem key={alert.id} alert={alert} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface AlertHistoryItemProps {
+  alert: Alert;
+}
+
+function AlertHistoryItem({ alert }: AlertHistoryItemProps) {
+  const [showDetails, setShowDetails] = useState(false);
+
+  const getAlertIcon = () => {
+    switch (alert.type) {
+      case 'critical': return '🚨';
+      case 'warning': return '⚠️';
+      case 'info': return 'ℹ️';
+      default: return '🔔';
+    }
+  };
+
+  const getAlertColor = () => {
+    switch (alert.type) {
+      case 'critical': return 'text-red-600 bg-red-50 border-red-200';
+      case 'warning': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+      case 'info': return 'text-blue-600 bg-blue-50 border-blue-200';
+      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+    }
+  };
+
+  const getCategoryIcon = () => {
+    switch (alert.category) {
+      case 'baby': return '👶';
+      case 'mother': return '👩';
+      case 'general': return '📋';
+      default: return '📝';
+    }
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.abs(now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) {
+      return 'Minder dan een uur geleden';
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)} uur geleden`;
+    } else {
+      return `${Math.floor(diffInHours / 24)} dagen geleden`;
+    }
+  };
+
+  return (
+    <div className="p-4">
+      <div className="flex items-start space-x-4">
+        <div className="flex-shrink-0">
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 ${getAlertColor()}`}>
+            <span className="text-lg">{getAlertIcon()}</span>
+          </div>
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center space-x-2 mb-1">
+                <span className="text-sm font-medium text-gray-900">
+                  {getCategoryIcon()} {alert.category.charAt(0).toUpperCase() + alert.category.slice(1)}
+                </span>
+                <span className={`px-2 py-1 text-xs rounded-full ${
+                  alert.type === 'critical' ? 'bg-red-100 text-red-800' :
+                  alert.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-blue-100 text-blue-800'
+                }`}>
+                  {alert.type === 'critical' ? 'Kritiek' : 
+                   alert.type === 'warning' ? 'Waarschuwing' : 'Info'}
+                </span>
+              </div>
+              
+              <p className="text-sm text-gray-900 mb-2">{alert.message}</p>
+              
+              <div className="text-xs text-gray-500 space-y-1">
+                <div>
+                  Ontstaan: {new Date(alert.timestamp).toLocaleString('nl-NL')}
+                </div>
+                <div>
+                  Afgehandeld: {new Date(alert.acknowledgedAt || '').toLocaleString('nl-NL')} door {alert.acknowledgedBy}
+                </div>
+                <div>
+                  {formatTimeAgo(alert.acknowledgedAt || '')}
+                </div>
+              </div>
+              
+              {alert.resolutionComment && (
+                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+                  <div className="text-xs font-medium text-green-800 mb-1">Opmerking bij afhandeling:</div>
+                  <div className="text-sm text-green-700">{alert.resolutionComment}</div>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex-shrink-0 ml-4">
+              <button
+                onClick={() => setShowDetails(!showDetails)}
+                className="text-xs text-indigo-600 hover:text-indigo-800 focus:outline-none"
+              >
+                {showDetails ? 'Minder details' : 'Meer details'}
+              </button>
+            </div>
+          </div>
+          
+          {showDetails && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-md">
+              <h5 className="text-sm font-medium text-gray-900 mb-2">Technische details</h5>
+              <div className="text-xs text-gray-600 space-y-1">
+                <div><strong>Alert ID:</strong> {alert.id}</div>
+                {alert.relatedRecordId && (
+                  <div><strong>Gerelateerde record ID:</strong> {alert.relatedRecordId}</div>
+                )}
+                <div><strong>Timestamp ontstaan:</strong> {alert.timestamp}</div>
+                <div><strong>Timestamp afhandeling:</strong> {alert.acknowledgedAt}</div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
