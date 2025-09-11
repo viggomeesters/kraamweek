@@ -78,6 +78,7 @@ export class DataService {
     data.babyRecords.push(newRecord);
     this.saveData(data);
     this.checkForAlerts(newRecord, data);
+    this.createTasksFromNote(newRecord);
     
     return newRecord;
   }
@@ -258,6 +259,27 @@ export class DataService {
         category: 'mother',
         message: `Hoge pijnklacht: niveau ${record.painLevel}/10`,
         relatedRecordId: record.id,
+      });
+    }
+  }
+
+  // Create tasks automatically from parent questions and todos
+  private static createTasksFromNote(record: BabyRecord): void {
+    if (record.type === 'note' && (record.noteCategory === 'question' || record.noteCategory === 'todo')) {
+      const taskTitle = record.noteCategory === 'question' 
+        ? `Vraag beantwoorden: ${record.notes?.substring(0, 50)}${(record.notes?.length || 0) > 50 ? '...' : ''}`
+        : `Verzoek uitvoeren: ${record.notes?.substring(0, 50)}${(record.notes?.length || 0) > 50 ? '...' : ''}`;
+      
+      const taskDescription = record.notes || '';
+      
+      this.addTask({
+        title: taskTitle,
+        description: taskDescription,
+        category: record.noteCategory === 'question' ? 'other' : 'household',
+        priority: record.noteCategory === 'question' ? 'medium' : 'low',
+        status: 'pending',
+        assignedTo: 'kraamhulp',
+        createdBy: 'parents',
       });
     }
   }
