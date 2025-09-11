@@ -131,8 +131,8 @@ function BabyOverview({ records }: BabyOverviewProps) {
   const [showJaundiceForm, setShowJaundiceForm] = useState(false);
   
   const recentRecords = records
-    .slice(-20)
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    .sort((a, b) => parseInt(b.id) - parseInt(a.id)) // Sort by ID (entry order)
+    .slice(0, 20); // Take first 20 (most recently entered)
 
   const refreshData = () => {
     // This should trigger a refresh of the data - we'll need to pass this from parent
@@ -233,10 +233,27 @@ function BabyOverview({ records }: BabyOverviewProps) {
         
         <div className="bg-white rounded-lg shadow-md p-4">
           <div className="text-2xl mb-2">🌡️</div>
-          <div className="text-2xl font-bold text-gray-900">
+          <div className={`text-2xl font-bold ${
+            stats.lastTemperature ? 
+              (stats.lastTemperature.value as number) >= 38.0 ? 'text-red-600' :
+              (stats.lastTemperature.value as number) >= 37.6 ? 'text-orange-600' :
+              (stats.lastTemperature.value as number) <= 35.5 ? 'text-blue-600' : 
+              'text-gray-900'
+            : 'text-gray-900'
+          }`}>
             {stats.lastTemperature ? `${stats.lastTemperature.value}°C` : '-'}
+            {stats.lastTemperature && (stats.lastTemperature.value as number) >= 38.5 && <span className="text-red-500 ml-1">🔥</span>}
+            {stats.lastTemperature && (stats.lastTemperature.value as number) <= 35.0 && <span className="text-blue-500 ml-1">❄️</span>}
           </div>
-          <div className="text-sm text-gray-600">Laatste temperatuur</div>
+          <div className="text-sm text-gray-600">
+            Laatste temperatuur
+            {stats.lastTemperature && (stats.lastTemperature.value as number) >= 38.5 && 
+              <div className="text-red-600 font-medium mt-1">⚠️ Extreem hoog</div>}
+            {stats.lastTemperature && (stats.lastTemperature.value as number) <= 35.0 && 
+              <div className="text-blue-600 font-medium mt-1">⚠️ Extreem laag</div>}
+            {stats.lastTemperature && (stats.lastTemperature.value as number) >= 37.6 && (stats.lastTemperature.value as number) < 38.5 && 
+              <div className="text-orange-600 font-medium mt-1">Verhoogd</div>}
+          </div>
         </div>
         
         <div className="bg-white rounded-lg shadow-md p-4">
@@ -301,7 +318,20 @@ function BabyOverview({ records }: BabyOverviewProps) {
                             record.breastSide === 'left' ? 'linker borst' : 'rechter borst'
                           })`
                         )}
-                        {record.type === 'temperature' && `Temperatuur: ${record.value}°C`}
+                        {record.type === 'temperature' && (
+                          <>
+                            <span className={
+                              (record.value as number) >= 38.0 ? 'text-red-600 font-bold' :
+                              (record.value as number) >= 37.6 ? 'text-orange-600 font-bold' :
+                              (record.value as number) <= 35.5 ? 'text-blue-600 font-bold' : 
+                              ''
+                            }>
+                              Temperatuur: {record.value}°C
+                            </span>
+                            {(record.value as number) >= 38.5 && <span className="text-red-500 ml-1">🔥</span>}
+                            {(record.value as number) <= 35.0 && <span className="text-blue-500 ml-1">❄️</span>}
+                          </>
+                        )}
                         {record.type === 'weight' && `Gewicht: ${record.weight}g`}
                         {record.type === 'diaper' && (
                           `Luier: ${record.diaperType}${record.diaperAmount ? ` (${record.diaperAmount})` : ''}`
@@ -346,8 +376,8 @@ function MotherSection({ records, onRefresh }: MotherSectionProps) {
   };
 
   const recentRecords = records
-    .slice(-10)
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    .sort((a, b) => parseInt(b.id) - parseInt(a.id)) // Sort by ID (entry order)
+    .slice(0, 10); // Take first 10 (most recently entered)
 
   return (
     <div className="space-y-6">
