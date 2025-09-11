@@ -157,7 +157,7 @@ export class DataService {
     return newAlert;
   }
 
-  static acknowledgeAlert(id: string, acknowledgedBy: string): Alert | null {
+  static acknowledgeAlert(id: string, acknowledgedBy: string, resolutionComment?: string): Alert | null {
     const data = this.loadData();
     const alertIndex = data.alerts.findIndex(a => a.id === id);
     
@@ -168,6 +168,7 @@ export class DataService {
       acknowledged: true,
       acknowledgedBy,
       acknowledgedAt: new Date().toISOString(),
+      resolutionComment: resolutionComment?.trim() || undefined,
     };
     
     this.saveData(data);

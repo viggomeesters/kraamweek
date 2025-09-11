@@ -14,6 +14,12 @@ export default function NurseDashboard() {
 
   // Get unacknowledged alerts
   const unacknowledgedAlerts = data.alerts.filter(alert => !alert.acknowledged);
+  
+  // Get recent acknowledged alerts (last 5)
+  const acknowledgedAlerts = data.alerts
+    .filter(alert => alert.acknowledged)
+    .sort((a, b) => new Date(b.acknowledgedAt || '').getTime() - new Date(a.acknowledgedAt || '').getTime())
+    .slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -28,11 +34,25 @@ export default function NurseDashboard() {
               <AlertItem 
                 key={alert.id} 
                 alert={alert} 
-                onAcknowledge={() => {
-                  DataService.acknowledgeAlert(alert.id, 'Kraamhulp');
+                onAcknowledge={(comment) => {
+                  DataService.acknowledgeAlert(alert.id, 'Kraamhulp', comment);
                   refreshData();
                 }} 
               />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Resolved Alerts Section */}
+      {acknowledgedAlerts.length > 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-green-800 mb-3 flex items-center">
+            ✅ Recent afgehandelde waarschuwingen ({acknowledgedAlerts.length})
+          </h3>
+          <div className="space-y-2">
+            {acknowledgedAlerts.map((alert) => (
+              <ResolvedAlertItem key={alert.id} alert={alert} />
             ))}
           </div>
         </div>
@@ -81,10 +101,13 @@ export default function NurseDashboard() {
 
 interface AlertItemProps {
   alert: Alert;
-  onAcknowledge: () => void;
+  onAcknowledge: (comment?: string) => void;
 }
 
 function AlertItem({ alert, onAcknowledge }: AlertItemProps) {
+  const [showCommentDialog, setShowCommentDialog] = useState(false);
+  const [comment, setComment] = useState('');
+
   const getAlertIcon = () => {
     switch (alert.type) {
       case 'critical': return '🚨';
@@ -103,6 +126,58 @@ function AlertItem({ alert, onAcknowledge }: AlertItemProps) {
     }
   };
 
+  const handleAcknowledge = () => {
+    onAcknowledge(comment.trim() || undefined);
+    setShowCommentDialog(false);
+    setComment('');
+  };
+
+  if (showCommentDialog) {
+    return (
+      <div className={`p-4 rounded-md ${getAlertColor()}`}>
+        <div className="mb-3">
+          <div className="flex items-center space-x-2 mb-2">
+            <span className="text-lg">{getAlertIcon()}</span>
+            <span className="font-medium">{alert.message}</span>
+          </div>
+          <div className="text-sm opacity-75">
+            {new Date(alert.timestamp).toLocaleString('nl-NL')}
+          </div>
+        </div>
+        
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Opmerking bij afhandeling (optioneel):
+            </label>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 bg-white"
+              rows={2}
+              placeholder="Bijv: Huisarts gebeld, temperatuur wordt gemonitord..."
+            />
+          </div>
+          
+          <div className="flex space-x-2">
+            <button
+              onClick={handleAcknowledge}
+              className="px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
+            >
+              Afhandelen
+            </button>
+            <button
+              onClick={() => setShowCommentDialog(false)}
+              className="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm"
+            >
+              Annuleren
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`p-3 rounded-md ${getAlertColor()} flex items-center justify-between`}>
       <div className="flex items-center space-x-2">
@@ -113,11 +188,50 @@ function AlertItem({ alert, onAcknowledge }: AlertItemProps) {
         </span>
       </div>
       <button
-        onClick={onAcknowledge}
+        onClick={() => setShowCommentDialog(true)}
         className="text-xs px-3 py-1 bg-white bg-opacity-50 rounded hover:bg-opacity-75 transition-colors"
       >
         Afhandelen
       </button>
+    </div>
+  );
+}
+
+interface ResolvedAlertItemProps {
+  alert: Alert;
+}
+
+function ResolvedAlertItem({ alert }: ResolvedAlertItemProps) {
+  const getAlertIcon = () => {
+    switch (alert.type) {
+      case 'critical': return '🚨';
+      case 'warning': return '⚠️';
+      case 'info': return 'ℹ️';
+      default: return '🔔';
+    }
+  };
+
+  return (
+    <div className="p-3 rounded-md bg-green-100 text-green-800">
+      <div className="flex items-start justify-between">
+        <div className="flex items-start space-x-2 flex-1">
+          <span className="text-lg mt-1">{getAlertIcon()}</span>
+          <div className="flex-1">
+            <div className="font-medium">{alert.message}</div>
+            <div className="text-xs opacity-75 mt-1">
+              Afgehandeld op {new Date(alert.acknowledgedAt || '').toLocaleString('nl-NL')} door {alert.acknowledgedBy}
+            </div>
+            {alert.resolutionComment && (
+              <div className="mt-2 p-2 bg-green-200 rounded text-sm">
+                <strong>Opmerking:</strong> {alert.resolutionComment}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="text-xs opacity-75 ml-2">
+          ✅ Afgehandeld
+        </div>
+      </div>
     </div>
   );
 }

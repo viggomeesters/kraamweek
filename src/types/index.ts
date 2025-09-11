@@ -65,6 +65,7 @@ export interface Alert {
   acknowledged?: boolean;
   acknowledgedBy?: string;
   acknowledgedAt?: string;
+  resolutionComment?: string; // Comment added when resolving the alert
 }
 
 export interface AppData {
