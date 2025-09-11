@@ -4,6 +4,11 @@ import { useState } from 'react';
 import { BabyRecord, AppData } from '@/types';
 import { DataService } from '@/lib/dataService';
 
+// Utility functions for date/time inputs
+const getCurrentDate = () => new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+const getCurrentTime = () => new Date().toTimeString().slice(0, 5); // HH:MM format
+const createTimestamp = (date: string, time: string) => new Date(`${date}T${time}:00`).toISOString();
+
 export default function ParentDashboard() {
   const [data, setData] = useState<AppData>(DataService.loadData());
   const [activeForm, setActiveForm] = useState<string | null>(null);
@@ -152,11 +157,13 @@ interface FormProps {
 function SleepForm({ onSubmit, onCancel }: FormProps) {
   const [duration, setDuration] = useState('');
   const [notes, setNotes] = useState('');
+  const [date, setDate] = useState(getCurrentDate);
+  const [time, setTime] = useState(getCurrentTime);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
-      timestamp: new Date().toISOString(),
+      timestamp: createTimestamp(date, time),
       type: 'sleep',
       duration: parseInt(duration) || 0,
       notes: notes.trim() || undefined,
@@ -178,6 +185,32 @@ function SleepForm({ onSubmit, onCancel }: FormProps) {
           min="1"
           required
         />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Datum
+          </label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Tijd
+          </label>
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+            required
+          />
+        </div>
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -212,11 +245,13 @@ function SleepForm({ onSubmit, onCancel }: FormProps) {
 function FeedingForm({ onSubmit, onCancel }: FormProps) {
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
+  const [date, setDate] = useState(getCurrentDate);
+  const [time, setTime] = useState(getCurrentTime);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
-      timestamp: new Date().toISOString(),
+      timestamp: createTimestamp(date, time),
       type: 'feeding',
       amount: parseInt(amount) || 0,
       notes: notes.trim() || undefined,
@@ -238,6 +273,32 @@ function FeedingForm({ onSubmit, onCancel }: FormProps) {
           min="1"
           required
         />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Datum
+          </label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Tijd
+          </label>
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+            required
+          />
+        </div>
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -272,20 +333,13 @@ function FeedingForm({ onSubmit, onCancel }: FormProps) {
 function TemperatureForm({ onSubmit, onCancel }: FormProps) {
   const [temperature, setTemperature] = useState('');
   const [notes, setNotes] = useState('');
-  const [date, setDate] = useState(() => {
-    const now = new Date();
-    return now.toISOString().split('T')[0]; // YYYY-MM-DD format
-  });
-  const [time, setTime] = useState(() => {
-    const now = new Date();
-    return now.toTimeString().slice(0, 5); // HH:MM format
-  });
+  const [date, setDate] = useState(getCurrentDate);
+  const [time, setTime] = useState(getCurrentTime);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const customDateTime = new Date(`${date}T${time}:00`);
     onSubmit({
-      timestamp: customDateTime.toISOString(),
+      timestamp: createTimestamp(date, time),
       type: 'temperature',
       value: parseFloat(temperature),
       notes: notes.trim() || undefined,
@@ -369,11 +423,13 @@ function TemperatureForm({ onSubmit, onCancel }: FormProps) {
 function DiaperForm({ onSubmit, onCancel }: FormProps) {
   const [diaperType, setDiaperType] = useState<'wet' | 'dirty' | 'both'>('wet');
   const [notes, setNotes] = useState('');
+  const [date, setDate] = useState(getCurrentDate);
+  const [time, setTime] = useState(getCurrentTime);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
-      timestamp: new Date().toISOString(),
+      timestamp: createTimestamp(date, time),
       type: 'diaper',
       diaperType,
       notes: notes.trim() || undefined,
