@@ -8,13 +8,47 @@ import { AnalyticsSection } from './Analytics';
 import { formatTime24, formatDateDDMMYYYY, formatDateTime24, formatDateLong } from '@/lib/dateUtils';
 import BottomNavigation from './BottomNavigation';
 import MobileOverview from './MobileOverview';
+import FloatingActionButton from './FloatingActionButton';
 
 export default function NurseDashboard() {
   const [data, setData] = useState<AppData>(DataService.loadData());
-  const [activeTab, setActiveTab] = useState<'recent' | 'overview' | 'analytics' | 'profile'>('profile');
+  const [activeTab, setActiveTab] = useState<'overview' | 'mother' | 'analytics' | 'profile' | 'actions'>('profile');
+  const [activeForm, setActiveForm] = useState<string | null>(null);
 
   const refreshData = () => {
     setData(DataService.loadData());
+  };
+
+  const handleAddBabyRecord = (record: Omit<BabyRecord, 'id'>) => {
+    DataService.addBabyRecord(record);
+    refreshData();
+    setActiveForm(null);
+    // Switch to overview tab to show the newly added record
+    setActiveTab('overview');
+  };
+
+  const handleAddMotherRecord = (record: Omit<MotherRecord, 'id'>) => {
+    DataService.addMotherRecord(record);
+    refreshData();
+    setActiveForm(null);
+    // Switch to mother tab to show the newly added record
+    setActiveTab('mother');
+  };
+
+  const handleAddObservation = (observation: Omit<FamilyObservation, 'id'>) => {
+    DataService.addFamilyObservation(observation);
+    refreshData();
+    setActiveForm(null);
+    // Switch to actions tab to show the newly added observation
+    setActiveTab('actions');
+  };
+
+  const handleAddTask = (task: Omit<Task, 'id' | 'createdAt'>) => {
+    DataService.addTask(task);
+    refreshData();
+    setActiveForm(null);
+    // Switch to actions tab to show the newly added task
+    setActiveTab('actions');
   };
 
   // Get unacknowledged alerts
@@ -50,33 +84,17 @@ export default function NurseDashboard() {
         )}
 
         {/* Tab Content */}
-        {activeTab === 'recent' && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-900">
-              Recente registraties
-            </h2>
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-              {recentRecords.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <div className="text-4xl mb-2">📋</div>
-                  <p>Nog geen registraties</p>
-                  <p className="text-sm mt-1">Wacht op nieuwe registraties van ouders</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-200">
-                  {recentRecords.map((record) => (
-                    <RecordItem key={record.id} record={record} />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
         {activeTab === 'overview' && (
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-gray-900">Baby Overzicht</h2>
             <BabyOverview records={data.babyRecords} />
+          </div>
+        )}
+
+        {activeTab === 'mother' && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-gray-900">Moeder</h2>
+            <MotherSection records={data.motherRecords} onRefresh={refreshData} />
           </div>
         )}
 
@@ -93,15 +111,164 @@ export default function NurseDashboard() {
             <BabyProfileSection onRefresh={refreshData} />
           </div>
         )}
+
+        {activeTab === 'actions' && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-gray-900">Acties & Waarschuwingen</h2>
+            <ActionsSection 
+              alerts={data.alerts}
+              tasks={data.tasks}
+              observations={data.familyObservations}
+              onRefresh={refreshData}
+            />
+          </div>
+        )}
       </div>
+
+      {/* Form Modal */}
+      {activeForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-96 overflow-y-auto">
+            <div className="p-6">
+              {activeForm === 'baby_care' && (
+                <KraamhulpBabyCareForm onSubmit={handleAddBabyRecord} onCancel={() => setActiveForm(null)} />
+              )}
+              {activeForm === 'mother_care' && (
+                <KraamhulpMotherCareForm onSubmit={handleAddMotherRecord} onCancel={() => setActiveForm(null)} />
+              )}
+              {activeForm === 'temperature' && (
+                <TemperatureForm onSubmit={handleAddBabyRecord} onCancel={() => setActiveForm(null)} />
+              )}
+              {activeForm === 'weight' && (
+                <BabyWeightForm onSubmit={handleAddBabyRecord} onCancel={() => setActiveForm(null)} />
+              )}
+              {activeForm === 'observation' && (
+                <ObservationForm onSubmit={handleAddObservation} onCancel={() => setActiveForm(null)} />
+              )}
+              {activeForm === 'task' && (
+                <KraamhulpTaskForm onSubmit={handleAddTask} onCancel={() => setActiveForm(null)} />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Action Button for Kraamhulp */}
+      <FloatingActionButton 
+        onActionSelect={(action) => setActiveForm(action)} 
+        userRole="kraamhulp"
+      />
 
       {/* Bottom Navigation */}
       <BottomNavigation 
         activeTab={activeTab} 
-        onTabChange={(tab) => setActiveTab(tab as 'recent' | 'overview' | 'analytics' | 'profile')}
+        onTabChange={(tab) => setActiveTab(tab as 'overview' | 'mother' | 'analytics' | 'profile' | 'actions')}
         userRole="kraamhulp"
       />
     </>
+  );
+}
+
+// Actions Section Component - combines alerts, tasks, and observations
+interface ActionsSectionProps {
+  alerts: Alert[];
+  tasks: Task[];
+  observations: FamilyObservation[];
+  onRefresh: () => void;
+}
+
+function ActionsSection({ alerts, tasks, observations, onRefresh }: ActionsSectionProps) {
+  const [activeSubTab, setActiveSubTab] = useState<'alerts' | 'tasks' | 'observations'>('alerts');
+
+  // Get unacknowledged alerts
+  const unacknowledgedAlerts = alerts.filter(alert => !alert.acknowledged);
+  
+  // Get pending tasks
+  const pendingTasks = tasks.filter(task => task.status === 'pending');
+  
+  // Get recent observations
+  const recentObservations = observations.slice(-5);
+
+  return (
+    <div className="space-y-6">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg shadow-md p-4 text-center">
+          <div className="text-2xl mb-2">⚠️</div>
+          <div className="text-2xl font-bold text-red-600">{unacknowledgedAlerts.length}</div>
+          <div className="text-sm text-gray-600">Nieuwe waarschuwingen</div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-md p-4 text-center">
+          <div className="text-2xl mb-2">✅</div>
+          <div className="text-2xl font-bold text-orange-600">{pendingTasks.length}</div>
+          <div className="text-sm text-gray-600">Openstaande taken</div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-md p-4 text-center">
+          <div className="text-2xl mb-2">📋</div>
+          <div className="text-2xl font-bold text-blue-600">{recentObservations.length}</div>
+          <div className="text-sm text-gray-600">Recente observaties</div>
+        </div>
+      </div>
+
+      {/* Sub-tabs */}
+      <div className="bg-white rounded-lg shadow-md">
+        <div className="flex border-b border-gray-200">
+          {[
+            { id: 'alerts', label: 'Waarschuwingen', count: unacknowledgedAlerts.length },
+            { id: 'tasks', label: 'Taken', count: pendingTasks.length },
+            { id: 'observations', label: 'Observaties', count: recentObservations.length },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSubTab(tab.id as 'alerts' | 'tasks' | 'observations')}
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                activeSubTab === tab.id
+                  ? 'text-indigo-600 border-b-2 border-indigo-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {tab.label} {tab.count > 0 && `(${tab.count})`}
+            </button>
+          ))}
+        </div>
+
+        <div className="p-6">
+          {activeSubTab === 'alerts' && (
+            <div className="space-y-4">
+              {unacknowledgedAlerts.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-2">✅</div>
+                  <p className="text-gray-500">Geen nieuwe waarschuwingen</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {unacknowledgedAlerts.map((alert) => (
+                    <AlertItem 
+                      key={alert.id} 
+                      alert={alert} 
+                      onAcknowledge={(comment) => {
+                        DataService.acknowledgeAlert(alert.id, 'Kraamhulp', comment);
+                        onRefresh();
+                      }} 
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeSubTab === 'tasks' && (
+            <TasksSection tasks={tasks} onRefresh={onRefresh} />
+          )}
+
+          {activeSubTab === 'observations' && (
+            <ObservationsSection observations={observations} onRefresh={onRefresh} />
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -2369,6 +2536,7 @@ function RecordItem({ record }: RecordItemProps) {
         const amountText = record.diaperAmount ? ` (${record.diaperAmount})` : '';
         return { icon: '👶', text: `Luier: ${record.diaperType}${amountText}`, time, date };
       case 'note':
+
         const categoryIcon = record.noteCategory === 'question' ? '❓' : 
                            record.noteCategory === 'todo' ? '✅' : '📝';
         const categoryText = record.noteCategory === 'question' ? 'Vraag' :
@@ -2401,4 +2569,638 @@ function RecordItem({ record }: RecordItemProps) {
     </div>
   );
 }
+
+// Kraamhulp specific form components
+
+// Temperature Form Component 
+interface TemperatureFormProps {
+  onSubmit: (record: Omit<BabyRecord, 'id'>) => void;
+  onCancel: () => void;
+}
+
+function TemperatureForm({ onSubmit, onCancel }: TemperatureFormProps) {
+  const [temperature, setTemperature] = useState('');
+  const [notes, setNotes] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      timestamp: new Date().toISOString(),
+      type: 'temperature',
+      value: parseFloat(temperature),
+      notes: notes.trim() || undefined,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h3 className="text-lg font-medium">Temperatuur meten</h3>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Temperatuur (°C)
+        </label>
+        <input
+          type="number"
+          step="0.1"
+          value={temperature}
+          onChange={(e) => setTemperature(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          min="35"
+          max="42"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Notities (optioneel)
+        </label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          rows={3}
+          placeholder="Bijzonderheden bij de meting..."
+        />
+      </div>
+      
+      <div className="flex space-x-3">
+        <button
+          type="submit"
+          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          Opslaan
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+        >
+          Annuleren
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// Kraamhulp Baby Care Form - for when kraamhulp takes over baby care
+interface KraamhulpBabyCareFormProps {
+  onSubmit: (record: Omit<BabyRecord, 'id'>) => void;
+  onCancel: () => void;
+}
+
+function KraamhulpBabyCareForm({ onSubmit, onCancel }: KraamhulpBabyCareFormProps) {
+  const [careType, setCareType] = useState<'feeding' | 'diaper' | 'sleep'>('feeding');
+  const [notes, setNotes] = useState('');
+  
+  // Feeding specific
+  const [feedingType, setFeedingType] = useState<'bottle' | 'breast_left' | 'breast_right' | 'breast_both'>('bottle');
+  const [amount, setAmount] = useState('');
+  
+  // Diaper specific
+  const [diaperType, setDiaperType] = useState<'wet' | 'dirty' | 'both'>('wet');
+  const [diaperAmount, setDiaperAmount] = useState<'little' | 'medium' | 'much'>('medium');
+  
+  // Sleep specific
+  const [duration, setDuration] = useState(30);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const baseRecord = {
+      timestamp: new Date().toISOString(),
+      type: careType,
+      notes: `Verzorging door kraamhulp: ${notes.trim()}`,
+    };
+
+    let record: Omit<BabyRecord, 'id'> = baseRecord;
+
+    if (careType === 'feeding') {
+      record = {
+        ...baseRecord,
+        feedingType,
+        ...(feedingType === 'bottle' && { amount: parseInt(amount) })
+      };
+    } else if (careType === 'diaper') {
+      record = {
+        ...baseRecord,
+        diaperType,
+        diaperAmount
+      };
+    } else if (careType === 'sleep') {
+      record = {
+        ...baseRecord,
+        duration
+      };
+    }
+
+    onSubmit(record);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h3 className="text-lg font-medium">Baby verzorging</h3>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Type verzorging
+        </label>
+        <div className="space-y-2">
+          {[
+            { value: 'feeding', label: 'Voeding geven', icon: '🍼' },
+            { value: 'diaper', label: 'Luier verschonen', icon: '👶' },
+            { value: 'sleep', label: 'Baby laten slapen', icon: '😴' },
+          ].map((option) => (
+            <label
+              key={option.value}
+              className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                careType === option.value
+                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                  : 'border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              <input
+                type="radio"
+                name="careType"
+                value={option.value}
+                checked={careType === option.value}
+                onChange={(e) => setCareType(e.target.value as 'feeding' | 'diaper' | 'sleep')}
+                className="sr-only"
+              />
+              <span className="text-2xl mr-3">{option.icon}</span>
+              <span className="font-medium">{option.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Feeding specific fields */}
+      {careType === 'feeding' && (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Voeding type
+            </label>
+            <select
+              value={feedingType}
+              onChange={(e) => setFeedingType(e.target.value as 'bottle' | 'breast_left' | 'breast_right' | 'breast_both')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="bottle">Fles</option>
+              <option value="breast_left">Linker borst</option>
+              <option value="breast_right">Rechter borst</option>
+              <option value="breast_both">Beide borsten</option>
+            </select>
+          </div>
+          {feedingType === 'bottle' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Hoeveelheid (ml)
+              </label>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                min="10"
+                max="200"
+                required
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Diaper specific fields */}
+      {careType === 'diaper' && (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Type luier
+            </label>
+            <select
+              value={diaperType}
+              onChange={(e) => setDiaperType(e.target.value as 'wet' | 'dirty' | 'both')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="wet">Nat</option>
+              <option value="dirty">Vuil</option>
+              <option value="both">Nat en vuil</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Hoeveelheid
+            </label>
+            <select
+              value={diaperAmount}
+              onChange={(e) => setDiaperAmount(e.target.value as 'little' | 'medium' | 'much')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="little">Weinig</option>
+              <option value="medium">Gemiddeld</option>
+              <option value="much">Veel</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* Sleep specific fields */}
+      {careType === 'sleep' && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Slaap duur (minuten)
+          </label>
+          <input
+            type="number"
+            value={duration}
+            onChange={(e) => setDuration(parseInt(e.target.value))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            min="5"
+            max="300"
+            required
+          />
+        </div>
+      )}
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Notities
+        </label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          rows={3}
+          placeholder="Bijzonderheden tijdens de verzorging..."
+          required
+        />
+      </div>
+      
+      <div className="flex space-x-3">
+        <button
+          type="submit"
+          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          Verzorging registreren
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+        >
+          Annuleren
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// Kraamhulp Mother Care Form
+interface KraamhulpMotherCareFormProps {
+  onSubmit: (record: Omit<MotherRecord, 'id'>) => void;
+  onCancel: () => void;
+}
+
+function KraamhulpMotherCareForm({ onSubmit, onCancel }: KraamhulpMotherCareFormProps) {
+  const [careType, setCareType] = useState<'temperature' | 'blood_pressure' | 'mood' | 'feeding_session' | 'note'>('note');
+  const [notes, setNotes] = useState('');
+  
+  // Temperature specific
+  const [temperature, setTemperature] = useState('');
+  
+  // Blood pressure specific
+  const [systolic, setSystolic] = useState('');
+  const [diastolic, setDiastolic] = useState('');
+  
+  // Mood specific
+  const [mood, setMood] = useState<MotherRecord['mood']>('good');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const baseRecord = {
+      timestamp: new Date().toISOString(),
+      type: careType,
+      notes: `Verzorging door kraamhulp: ${notes.trim()}`,
+    };
+
+    let record: Omit<MotherRecord, 'id'> = baseRecord;
+
+    if (careType === 'temperature') {
+      record = { ...baseRecord, value: parseFloat(temperature) };
+    } else if (careType === 'blood_pressure') {
+      record = { 
+        ...baseRecord, 
+        bloodPressure: {
+          systolic: parseInt(systolic),
+          diastolic: parseInt(diastolic),
+        } 
+      };
+    } else if (careType === 'mood') {
+      record = { ...baseRecord, mood };
+    }
+
+    onSubmit(record);
+  };
+
+  const careTypeOptions = [
+    { value: 'note', label: 'Algemene verzorging', icon: '📝' },
+    { value: 'temperature', label: 'Temperatuur meten', icon: '🌡️' },
+    { value: 'blood_pressure', label: 'Bloeddruk meten', icon: '💓' },
+    { value: 'mood', label: 'Stemming bespreken', icon: '😊' },
+    { value: 'feeding_session', label: 'Voedingsbegeleiding', icon: '🤱' },
+  ];
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h3 className="text-lg font-medium">Moeder verzorging</h3>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Type verzorging
+        </label>
+        <div className="space-y-2">
+          {careTypeOptions.map((option) => (
+            <label
+              key={option.value}
+              className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                careType === option.value
+                  ? 'border-pink-500 bg-pink-50 text-pink-700'
+                  : 'border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              <input
+                type="radio"
+                name="careType"
+                value={option.value}
+                checked={careType === option.value}
+                onChange={(e) => setCareType(e.target.value as 'temperature' | 'blood_pressure' | 'mood' | 'feeding_session' | 'note')}
+                className="sr-only"
+              />
+              <span className="text-2xl mr-3">{option.icon}</span>
+              <span className="font-medium">{option.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Temperature specific */}
+      {careType === 'temperature' && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Temperatuur (°C)
+          </label>
+          <input
+            type="number"
+            step="0.1"
+            value={temperature}
+            onChange={(e) => setTemperature(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+            min="35"
+            max="42"
+            required
+          />
+        </div>
+      )}
+
+      {/* Blood pressure specific */}
+      {careType === 'blood_pressure' && (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Systolisch
+            </label>
+            <input
+              type="number"
+              value={systolic}
+              onChange={(e) => setSystolic(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+              min="80"
+              max="200"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Diastolisch
+            </label>
+            <input
+              type="number"
+              value={diastolic}
+              onChange={(e) => setDiastolic(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+              min="40"
+              max="120"
+              required
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Mood specific */}
+      {careType === 'mood' && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Stemming van moeder
+          </label>
+          <select
+            value={mood}
+            onChange={(e) => setMood(e.target.value as MotherRecord['mood'])}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+          >
+            <option value="excellent">Uitstekend</option>
+            <option value="good">Goed</option>
+            <option value="okay">Oké</option>
+            <option value="low">Laag</option>
+            <option value="very_low">Zeer laag</option>
+          </select>
+        </div>
+      )}
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Notities en observaties
+        </label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+          rows={4}
+          placeholder="Beschrijf de verzorging, observaties, gesprek..."
+          required
+        />
+      </div>
+      
+      <div className="flex space-x-3">
+        <button
+          type="submit"
+          className="bg-pink-600 text-white px-4 py-2 rounded-md hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-500"
+        >
+          Verzorging registreren
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+        >
+          Annuleren
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// Kraamhulp Task Form
+interface KraamhulpTaskFormProps {
+  onSubmit: (task: Omit<Task, 'id' | 'createdAt'>) => void;
+  onCancel: () => void;
+}
+
+function KraamhulpTaskForm({ onSubmit, onCancel }: KraamhulpTaskFormProps) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState<Task['category']>('household');
+  const [priority, setPriority] = useState<Task['priority']>('medium');
+  const [assignedTo, setAssignedTo] = useState<Task['assignedTo']>('parents');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    onSubmit({
+      title: title.trim(),
+      description: description.trim() || undefined,
+      category,
+      priority,
+      status: 'pending',
+      assignedTo,
+      createdBy: 'kraamhulp',
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h4 className="text-lg font-medium">Nieuwe taak aanmaken</h4>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Taak titel *
+        </label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder="Bijv: Was opvouwen, lunch klaarmaken..."
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Beschrijving (optioneel)
+        </label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          rows={3}
+          placeholder="Extra uitleg over de taak..."
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Categorie
+          </label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as Task['category'])}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="household">Huishoudelijk</option>
+            <option value="baby_care">Baby verzorging</option>
+            <option value="mother_care">Moeder verzorging</option>
+            <option value="administrative">Administratief</option>
+            <option value="other">Anders</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Prioriteit
+          </label>
+          <select
+            value={priority}
+            onChange={(e) => setPriority(e.target.value as Task['priority'])}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="low">Laag</option>
+            <option value="medium">Gemiddeld</option>
+            <option value="high">Hoog</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Toegewezen aan
+          </label>
+          <select
+            value={assignedTo || ''}
+            onChange={(e) => setAssignedTo(e.target.value as Task['assignedTo'] || undefined)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">Niet toegewezen</option>
+            <option value="parents">Ouders</option>
+            <option value="kraamhulp">Mezelf</option>
+            <option value="family">Familie</option>
+            <option value="other">Anders</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="flex space-x-3">
+        <button
+          type="submit"
+          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          Taak aanmaken
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+        >
+          Annuleren
+        </button>
+      </div>
+    </form>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
