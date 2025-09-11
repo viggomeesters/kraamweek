@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { BabyRecord, AppData, BabyProfile } from '@/types';
 import { DataService } from '@/lib/dataService';
+import { AnalyticsSection } from './Analytics';
 
 // Utility functions for date/time inputs
 const getCurrentDate = () => new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -12,6 +13,7 @@ const createTimestamp = (date: string, time: string) => new Date(`${date}T${time
 export default function ParentDashboard() {
   const [data, setData] = useState<AppData>(DataService.loadData());
   const [activeForm, setActiveForm] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'logging' | 'recent' | 'profile' | 'analytics'>('logging');
 
   const refreshData = () => {
     setData(DataService.loadData());
@@ -29,107 +31,142 @@ export default function ParentDashboard() {
     .slice(0, 10); // Take first 10 (most recently entered)
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">
-          Baby gegevens registreren
-        </h2>
-        
-        {/* Action Buttons */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-          <ActionButton
-            icon="😴"
-            title="Slaap"
-            onClick={() => setActiveForm('sleep')}
-            active={activeForm === 'sleep'}
-          />
-          <ActionButton
-            icon="🍼"
-            title="Voeding"
-            onClick={() => setActiveForm('feeding')}
-            active={activeForm === 'feeding'}
-          />
-          <ActionButton
-            icon="🥛"
-            title="Kolven"
-            onClick={() => setActiveForm('pumping')}
-            active={activeForm === 'pumping'}
-          />
-          <ActionButton
-            icon="🌡️"
-            title="Temperatuur"
-            onClick={() => setActiveForm('temperature')}
-            active={activeForm === 'temperature'}
-          />
-          <ActionButton
-            icon="👶"
-            title="Luier"
-            onClick={() => setActiveForm('diaper')}
-            active={activeForm === 'diaper'}
-          />
-          <ActionButton
-            icon="📝"
-            title="Notitie"
-            onClick={() => setActiveForm('note')}
-            active={activeForm === 'note'}
-          />
-        </div>
-
-        {/* Forms */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          {activeForm === 'sleep' && (
-            <SleepForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
-          )}
-          {activeForm === 'feeding' && (
-            <FeedingForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
-          )}
-          {activeForm === 'pumping' && (
-            <PumpingForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
-          )}
-          {activeForm === 'temperature' && (
-            <TemperatureForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
-          )}
-          {activeForm === 'diaper' && (
-            <DiaperForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
-          )}
-          {activeForm === 'note' && (
-            <NoteForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
-          )}
-          {!activeForm && (
-            <p className="text-gray-500 text-center py-8">
-              Selecteer een actie hierboven om een registratie toe te voegen
-            </p>
-          )}
-        </div>
+    <div className="space-y-6">
+      {/* Navigation Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: 'logging', label: 'Registreren', icon: '📝' },
+            { id: 'recent', label: 'Overzicht', icon: '📋' },
+            { id: 'analytics', label: 'Analytics', icon: '📊' },
+            { id: 'profile', label: 'Baby Profiel', icon: '📄' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as 'logging' | 'recent' | 'profile' | 'analytics')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === tab.id
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </nav>
       </div>
 
-      {/* Recent Records */}
-      <div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-4">
-          Recente registraties
-        </h3>
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          {recentRecords.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">
-              Nog geen registraties
-            </p>
-          ) : (
-            <div className="divide-y divide-gray-200">
-              {recentRecords.map((record) => (
-                <RecordItem key={record.id} record={record} />
-              ))}
+      {/* Tab Content */}
+      {activeTab === 'logging' && (
+        <div className="space-y-8">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              Baby gegevens registreren
+            </h2>
+            
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+              <ActionButton
+                icon="😴"
+                title="Slaap"
+                onClick={() => setActiveForm('sleep')}
+                active={activeForm === 'sleep'}
+              />
+              <ActionButton
+                icon="🍼"
+                title="Voeding"
+                onClick={() => setActiveForm('feeding')}
+                active={activeForm === 'feeding'}
+              />
+              <ActionButton
+                icon="🥛"
+                title="Kolven"
+                onClick={() => setActiveForm('pumping')}
+                active={activeForm === 'pumping'}
+              />
+              <ActionButton
+                icon="🌡️"
+                title="Temperatuur"
+                onClick={() => setActiveForm('temperature')}
+                active={activeForm === 'temperature'}
+              />
+              <ActionButton
+                icon="👶"
+                title="Luier"
+                onClick={() => setActiveForm('diaper')}
+                active={activeForm === 'diaper'}
+              />
+              <ActionButton
+                icon="📝"
+                title="Notitie"
+                onClick={() => setActiveForm('note')}
+                active={activeForm === 'note'}
+              />
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* Baby Profile Section */}
-      <div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-4">
-          Baby profiel
-        </h3>
-        <BabyProfileSection onRefresh={refreshData} />
-      </div>
+            {/* Forms */}
+            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+              {activeForm === 'sleep' && (
+                <SleepForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
+              )}
+              {activeForm === 'feeding' && (
+                <FeedingForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
+              )}
+              {activeForm === 'pumping' && (
+                <PumpingForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
+              )}
+              {activeForm === 'temperature' && (
+                <TemperatureForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
+              )}
+              {activeForm === 'diaper' && (
+                <DiaperForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
+              )}
+              {activeForm === 'note' && (
+                <NoteForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
+              )}
+              {!activeForm && (
+                <p className="text-gray-500 text-center py-8">
+                  Selecteer een actie hierboven om een registratie toe te voegen
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'recent' && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-gray-900">
+            Recente registraties
+          </h3>
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            {recentRecords.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">
+                Nog geen registraties
+              </p>
+            ) : (
+              <div className="divide-y divide-gray-200">
+                {recentRecords.map((record) => (
+                  <RecordItem key={record.id} record={record} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'analytics' && (
+        <AnalyticsSection babyRecords={data.babyRecords} motherRecords={data.motherRecords} />
+      )}
+
+      {activeTab === 'profile' && (
+        <div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">
+            Baby profiel
+          </h3>
+          <BabyProfileSection onRefresh={refreshData} />
+        </div>
+      )}
     </div>
   );
 }
