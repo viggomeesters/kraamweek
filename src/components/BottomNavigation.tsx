@@ -9,18 +9,18 @@ interface BottomNavigationProps {
 export default function BottomNavigation({ activeTab, onTabChange, userRole }: BottomNavigationProps) {
   // Navigation items for parents
   const parentNavItems = [
-    { id: 'recent', label: 'Recent', icon: '🕒' },
-    { id: 'overview', label: 'Overzicht', icon: '📋' },
-    { id: 'analytics', label: 'Analytics', icon: '📊' },
     { id: 'profile', label: 'Profiel', icon: '👶' },
+    { id: 'analytics', label: 'Analytics', icon: '📊' },
+    { id: 'overview', label: 'Overzicht', icon: '📋' },
+    { id: 'recent', label: 'Recent', icon: '🕒' },
   ];
 
   // Navigation items for kraamhulp
   const kraamhulpNavItems = [
-    { id: 'recent', label: 'Recent', icon: '🕒' },
-    { id: 'overview', label: 'Baby', icon: '👶' },
-    { id: 'analytics', label: 'Analytics', icon: '📊' },
     { id: 'profile', label: 'Profiel', icon: '📄' },
+    { id: 'analytics', label: 'Analytics', icon: '📊' },
+    { id: 'overview', label: 'Baby', icon: '👶' },
+    { id: 'recent', label: 'Recent', icon: '🕒' },
   ];
 
   const navItems = userRole === 'parents' ? parentNavItems : kraamhulpNavItems;

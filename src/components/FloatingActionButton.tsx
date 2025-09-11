@@ -34,7 +34,7 @@ export default function FloatingActionButton({ onActionSelect }: FloatingActionB
 
       {/* Action buttons (when open) */}
       {isOpen && (
-        <div className="fixed bottom-20 left-4 z-50 space-y-3">
+        <div className="fixed bottom-20 right-4 z-50 space-y-3">
           {actions.map((action, index) => (
             <div
               key={action.id}
@@ -54,7 +54,7 @@ export default function FloatingActionButton({ onActionSelect }: FloatingActionB
               >
                 <span className="text-lg">{action.icon}</span>
               </button>
-              <div className="absolute left-14 top-1/2 -translate-y-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-90">
+              <div className="absolute right-14 top-1/2 -translate-y-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-90">
                 {action.label}
               </div>
             </div>
@@ -65,7 +65,7 @@ export default function FloatingActionButton({ onActionSelect }: FloatingActionB
       {/* Main FAB */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-4 left-4 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg z-50 flex items-center justify-center transition-all duration-300 transform ${
+        className={`fixed bottom-4 right-4 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg z-50 flex items-center justify-center transition-all duration-300 transform ${
           isOpen ? 'rotate-45 scale-110' : 'hover:scale-110'
         } focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
         aria-label={isOpen ? 'Sluiten' : 'Registratie toevoegen'}

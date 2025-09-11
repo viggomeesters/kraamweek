@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BabyRecord, AppData, BabyProfile } from '@/types';
+import { BabyRecord, AppData, BabyProfile, User, Alert } from '@/types';
 import { DataService } from '@/lib/dataService';
 import { AnalyticsSection } from './Analytics';
 
-import { formatTime24, formatDateDDMMYYYY, formatDateLong } from '@/lib/dateUtils';
+import { formatTime24, formatDateDDMMYYYY, formatDateLong, formatDateTime24 } from '@/lib/dateUtils';
 import FloatingActionButton from './FloatingActionButton';
 import BottomNavigation from './BottomNavigation';
 import MobileOverview from './MobileOverview';
@@ -15,10 +15,14 @@ const getCurrentDate = () => new Date().toISOString().split('T')[0]; // YYYY-MM-
 const getCurrentTime = () => new Date().toTimeString().slice(0, 5); // HH:MM format
 const createTimestamp = (date: string, time: string) => new Date(`${date}T${time}:00`).toISOString();
 
-export default function ParentDashboard() {
+interface ParentDashboardProps {
+  user: User;
+}
+
+export default function ParentDashboard({ user }: ParentDashboardProps) {
   const [data, setData] = useState<AppData>(DataService.loadData());
   const [activeForm, setActiveForm] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'recent' | 'overview' | 'analytics' | 'profile'>('recent');
+  const [activeTab, setActiveTab] = useState<'recent' | 'overview' | 'analytics' | 'profile'>('profile');
 
   const refreshData = () => {
     setData(DataService.loadData());
@@ -37,9 +41,33 @@ export default function ParentDashboard() {
     .sort((a, b) => parseInt(b.id) - parseInt(a.id)) // Sort by ID (entry order) 
     .slice(0, 10); // Take first 10 (most recently entered)
 
+  // Get unacknowledged alerts (kraamhulp only)
+  const unacknowledgedAlerts = data.alerts.filter(alert => !alert.acknowledged);
+
   return (
     <>
       <div className="space-y-4">
+        {/* Alerts Section - Only for Kraamhulp */}
+        {user.role === 'kraamhulp' && unacknowledgedAlerts.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-red-800 mb-3 flex items-center">
+              ⚠️ Waarschuwingen ({unacknowledgedAlerts.length})
+            </h3>
+            <div className="space-y-2">
+              {unacknowledgedAlerts.map((alert) => (
+                <AlertItem 
+                  key={alert.id} 
+                  alert={alert} 
+                  onAcknowledge={(comment) => {
+                    DataService.acknowledgeAlert(alert.id, 'Kraamhulp', comment);
+                    refreshData();
+                  }} 
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Tab Content */}
         {activeTab === 'recent' && (
           <div className="space-y-4">
@@ -51,7 +79,12 @@ export default function ParentDashboard() {
                 <div className="text-center py-8 text-gray-500">
                   <div className="text-4xl mb-2">📋</div>
                   <p>Nog geen registraties</p>
-                  <p className="text-sm mt-1">Gebruik de + knop om een registratie toe te voegen</p>
+                  <p className="text-sm mt-1">
+                    {user.role === 'parents' 
+                      ? 'Gebruik de + knop om een registratie toe te voegen'
+                      : 'Wacht op nieuwe registraties van ouders'
+                    }
+                  </p>
                 </div>
               ) : (
                 <div className="divide-y divide-gray-200">
@@ -111,14 +144,16 @@ export default function ParentDashboard() {
         )}
       </div>
 
-      {/* Floating Action Button */}
-      <FloatingActionButton onActionSelect={(action) => setActiveForm(action)} />
+      {/* Floating Action Button - Only for Parents */}
+      {user.role === 'parents' && (
+        <FloatingActionButton onActionSelect={(action) => setActiveForm(action)} />
+      )}
 
       {/* Bottom Navigation */}
       <BottomNavigation 
         activeTab={activeTab} 
         onTabChange={(tab) => setActiveTab(tab as 'recent' | 'overview' | 'analytics' | 'profile')}
-        userRole="parents"
+        userRole={user.role}
       />
     </>
   );
@@ -1518,6 +1553,105 @@ function BabyProfileDisplay({ profile }: BabyProfileDisplayProps) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Alert Components for Kraamhulp
+interface AlertItemProps {
+  alert: Alert;
+  onAcknowledge: (comment?: string) => void;
+}
+
+function AlertItem({ alert, onAcknowledge }: AlertItemProps) {
+  const [showCommentDialog, setShowCommentDialog] = useState(false);
+  const [comment, setComment] = useState('');
+
+  const getAlertIcon = () => {
+    switch (alert.type) {
+      case 'critical': return '🚨';
+      case 'warning': return '⚠️';
+      case 'info': return 'ℹ️';
+      default: return '🔔';
+    }
+  };
+
+  const getAlertColor = () => {
+    switch (alert.type) {
+      case 'critical': return 'text-red-800 bg-red-100';
+      case 'warning': return 'text-yellow-800 bg-yellow-100';
+      case 'info': return 'text-blue-800 bg-blue-100';
+      default: return 'text-gray-800 bg-gray-100';
+    }
+  };
+
+  const handleAcknowledge = () => {
+    onAcknowledge(comment.trim() || undefined);
+    setShowCommentDialog(false);
+    setComment('');
+  };
+
+  if (showCommentDialog) {
+    return (
+      <div className={`p-4 rounded-md ${getAlertColor()}`}>
+        <div className="mb-3">
+          <div className="flex items-center space-x-2 mb-2">
+            <span className="text-lg">{getAlertIcon()}</span>
+            <span className="font-medium">{alert.message}</span>
+          </div>
+          <div className="text-sm opacity-75">
+            {formatDateTime24(alert.timestamp)}
+          </div>
+        </div>
+        
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Opmerking bij afhandeling (optioneel):
+            </label>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 bg-white"
+              rows={2}
+              placeholder="Bijv: Huisarts gebeld, temperatuur wordt gemonitord..."
+            />
+          </div>
+          
+          <div className="flex space-x-2">
+            <button
+              onClick={handleAcknowledge}
+              className="px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
+            >
+              Afhandelen
+            </button>
+            <button
+              onClick={() => setShowCommentDialog(false)}
+              className="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm"
+            >
+              Annuleren
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`p-3 rounded-md ${getAlertColor()} flex items-center justify-between`}>
+      <div className="flex items-center space-x-2">
+        <span className="text-lg">{getAlertIcon()}</span>
+        <span className="font-medium">{alert.message}</span>
+        <span className="text-xs opacity-75">
+          {formatDateTime24(alert.timestamp)}
+        </span>
+      </div>
+      <button
+        onClick={() => setShowCommentDialog(true)}
+        className="text-xs px-3 py-1 bg-white bg-opacity-50 rounded hover:bg-opacity-75 transition-colors"
+      >
+        Afhandelen
+      </button>
     </div>
   );
 }
