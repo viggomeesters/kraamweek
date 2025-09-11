@@ -174,7 +174,7 @@ function SleepForm({ onSubmit, onCancel }: FormProps) {
           type="number"
           value={duration}
           onChange={(e) => setDuration(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
           min="1"
           required
         />
@@ -186,7 +186,7 @@ function SleepForm({ onSubmit, onCancel }: FormProps) {
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
           rows={3}
         />
       </div>
@@ -234,7 +234,7 @@ function FeedingForm({ onSubmit, onCancel }: FormProps) {
           type="number"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
           min="1"
           required
         />
@@ -246,7 +246,7 @@ function FeedingForm({ onSubmit, onCancel }: FormProps) {
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
           rows={3}
         />
       </div>
@@ -295,7 +295,7 @@ function TemperatureForm({ onSubmit, onCancel }: FormProps) {
           step="0.1"
           value={temperature}
           onChange={(e) => setTemperature(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
           min="30"
           max="42"
           required
@@ -308,7 +308,7 @@ function TemperatureForm({ onSubmit, onCancel }: FormProps) {
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
           rows={3}
         />
       </div>
@@ -379,7 +379,7 @@ function DiaperForm({ onSubmit, onCancel }: FormProps) {
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
           rows={3}
         />
       </div>
@@ -446,7 +446,7 @@ function JaundiceForm({ onSubmit, onCancel }: FormProps) {
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
           rows={3}
         />
       </div>
@@ -491,7 +491,7 @@ function NoteForm({ onSubmit, onCancel }: FormProps) {
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
           rows={4}
           required
         />
