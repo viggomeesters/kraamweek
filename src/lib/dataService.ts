@@ -94,7 +94,7 @@ export class DataService {
     
     data.motherRecords.push(newRecord);
     this.saveData(data);
-    this.checkForMotherAlerts(newRecord, data);
+    this.checkForMotherAlerts(newRecord);
     
     return newRecord;
   }
@@ -225,7 +225,7 @@ export class DataService {
     }
   }
 
-  private static checkForMotherAlerts(record: MotherRecord, _data: AppData): void {
+  private static checkForMotherAlerts(record: MotherRecord): void {
     // Check temperature alerts for mother
     if (record.type === 'temperature' && typeof record.value === 'number') {
       if (record.value > 38.0) {
@@ -412,6 +412,33 @@ export class DataService {
     });
     
     return result.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  static getDailyWeightsWithBirthWeight(startDate: string, endDate: string): Array<{date: string, weight: number}> {
+    const profile = this.getBabyProfile();
+    const weights = this.getDailyWeights(startDate, endDate);
+    
+    // If we have a birth weight, include it as the first data point if within range
+    if (profile?.geboortgewicht && profile?.geboortedatum) {
+      const birthDate = profile.geboortedatum.split('T')[0];
+      const start = new Date(startDate);
+      const birth = new Date(birthDate);
+      
+      // Include birth weight if birth date is within or before our range
+      if (birth <= start || (birth >= new Date(startDate) && birth <= new Date(endDate))) {
+        const result = [...weights];
+        
+        // Add birth weight if not already present
+        const birthWeightExists = result.some(w => w.date === birthDate);
+        if (!birthWeightExists) {
+          result.unshift({ date: birthDate, weight: profile.geboortgewicht });
+        }
+        
+        return result.sort((a, b) => a.date.localeCompare(b.date));
+      }
+    }
+    
+    return weights;
   }
 
   static getDailyTemperatures(startDate: string, endDate: string, type: 'baby' | 'mother'): Array<{date: string, temperature: number}> {
