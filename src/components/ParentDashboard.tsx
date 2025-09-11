@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BabyRecord, AppData } from '@/types';
+import { BabyRecord, AppData, BabyProfile } from '@/types';
 import { DataService } from '@/lib/dataService';
 
 // Utility functions for date/time inputs
@@ -121,6 +121,14 @@ export default function ParentDashboard() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Baby Profile Section */}
+      <div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-4">
+          Baby profiel
+        </h3>
+        <BabyProfileSection onRefresh={refreshData} />
       </div>
     </div>
   );
@@ -1305,6 +1313,404 @@ function RecordItem({ record }: RecordItemProps) {
           <div>{date}</div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Baby Profile Components for Parents
+function BabyProfileSection({ onRefresh }: { onRefresh: () => void }) {
+  const [profile, setProfile] = useState<BabyProfile | null>(DataService.getBabyProfile());
+  const [showForm, setShowForm] = useState(false);
+
+  const refreshProfile = () => {
+    setProfile(DataService.getBabyProfile());
+    onRefresh();
+  };
+
+  const handleSaveProfile = (profileData: Omit<BabyProfile, 'id' | 'createdAt' | 'updatedAt'>) => {
+    DataService.saveBabyProfile(profileData);
+    refreshProfile();
+    setShowForm(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      {showForm && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <BabyProfileForm 
+            profile={profile}
+            onSubmit={handleSaveProfile}
+            onCancel={() => setShowForm(false)}
+          />
+        </div>
+      )}
+
+      {!showForm && profile && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex justify-between items-start mb-4">
+            <h4 className="text-lg font-medium text-gray-900">Baby profiel</h4>
+            <button
+              onClick={() => setShowForm(true)}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+            >
+              Bewerken
+            </button>
+          </div>
+          <BabyProfileDisplay profile={profile} />
+        </div>
+      )}
+
+      {!showForm && !profile && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="text-center py-8">
+            <div className="text-6xl mb-4">👶</div>
+            <h4 className="text-lg font-medium text-gray-900 mb-2">Nog geen baby profiel</h4>
+            <p className="text-gray-600 mb-4">
+              Maak een profiel aan om belangrijke informatie over je baby vast te leggen.
+            </p>
+            <button
+              onClick={() => setShowForm(true)}
+              className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              Profiel aanmaken
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface BabyProfileFormProps {
+  profile: BabyProfile | null;
+  onSubmit: (profile: Omit<BabyProfile, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onCancel: () => void;
+}
+
+function BabyProfileForm({ profile, onSubmit, onCancel }: BabyProfileFormProps) {
+  const [voornaam, setVoornaam] = useState(profile?.voornaam || '');
+  const [achternaam, setAchternaam] = useState(profile?.achternaam || '');
+  const [roepnaam, setRoepnaam] = useState(profile?.roepnaam || '');
+  const [geslacht, setGeslacht] = useState<'jongen' | 'meisje' | 'onbekend'>(profile?.geslacht || 'onbekend');
+  const [geboortedatum, setGeboortedatum] = useState(profile?.geboortedatum?.split('T')[0] || '');
+  const [geboortijd, setGeboortijd] = useState(profile?.geboortijd || '');
+  const [geboortgewicht, setGeboortgewicht] = useState(profile?.geboortgewicht?.toString() || '');
+  const [geboortelengte, setGeboortelengte] = useState(profile?.geboortelengte?.toString() || '');
+  const [huisarts, setHuisarts] = useState(profile?.huisarts || '');
+  const [verloskundige, setVerloskundige] = useState(profile?.verloskundige || '');
+  const [bijzonderheden, setBijzonderheden] = useState(profile?.bijzonderheden || '');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    onSubmit({
+      voornaam: voornaam.trim(),
+      achternaam: achternaam.trim(),
+      roepnaam: roepnaam.trim() || undefined,
+      geslacht,
+      geboortedatum: geboortedatum ? new Date(geboortedatum).toISOString() : new Date().toISOString(),
+      geboortijd: geboortijd.trim() || undefined,
+      geboortgewicht: geboortgewicht ? parseInt(geboortgewicht) : undefined,
+      geboortelengte: geboortelengte ? parseInt(geboortelengte) : undefined,
+      huisarts: huisarts.trim() || undefined,
+      verloskundige: verloskundige.trim() || undefined,
+      bijzonderheden: bijzonderheden.trim() || undefined,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <h4 className="text-lg font-medium text-gray-900">
+        {profile ? 'Baby profiel bewerken' : 'Nieuw baby profiel'}
+      </h4>
+
+      {/* Basic Information */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Voornaam *
+          </label>
+          <input
+            type="text"
+            value={voornaam}
+            onChange={(e) => setVoornaam(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Achternaam *
+          </label>
+          <input
+            type="text"
+            value={achternaam}
+            onChange={(e) => setAchternaam(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Roepnaam
+          </label>
+          <input
+            type="text"
+            value={roepnaam}
+            onChange={(e) => setRoepnaam(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+            placeholder="Indien anders dan voornaam"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Geslacht
+          </label>
+          <select
+            value={geslacht}
+            onChange={(e) => setGeslacht(e.target.value as 'jongen' | 'meisje' | 'onbekend')}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+          >
+            <option value="onbekend">Onbekend</option>
+            <option value="jongen">Jongen</option>
+            <option value="meisje">Meisje</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Birth Information - Simplified for parents */}
+      <div className="border-t border-gray-200 pt-6">
+        <h5 className="text-md font-medium text-gray-900 mb-4">Geboorte informatie</h5>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Geboortedatum *
+            </label>
+            <input
+              type="date"
+              value={geboortedatum}
+              onChange={(e) => setGeboortedatum(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Geboortijd
+            </label>
+            <input
+              type="time"
+              value={geboortijd}
+              onChange={(e) => setGeboortijd(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Geboortegewicht (gram)
+            </label>
+            <input
+              type="number"
+              value={geboortgewicht}
+              onChange={(e) => setGeboortgewicht(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+              min="500"
+              max="8000"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Geboortelengte (cm)
+            </label>
+            <input
+              type="number"
+              value={geboortelengte}
+              onChange={(e) => setGeboortelengte(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+              min="25"
+              max="70"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Care Information - Simplified for parents */}
+      <div className="border-t border-gray-200 pt-6">
+        <h5 className="text-md font-medium text-gray-900 mb-4">Zorgverlening</h5>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Huisarts
+            </label>
+            <input
+              type="text"
+              value={huisarts}
+              onChange={(e) => setHuisarts(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Verloskundige
+            </label>
+            <input
+              type="text"
+              value={verloskundige}
+              onChange={(e) => setVerloskundige(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Additional Notes */}
+      <div className="border-t border-gray-200 pt-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Bijzonderheden  
+          </label>
+          <textarea
+            value={bijzonderheden}
+            onChange={(e) => setBijzonderheden(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+            rows={3}
+            placeholder="Medische bijzonderheden, allergieën, etc."
+          />
+        </div>
+      </div>
+
+      <div className="flex space-x-3 pt-4">
+        <button
+          type="submit"
+          className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          {profile ? 'Wijzigingen opslaan' : 'Profiel aanmaken'}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="bg-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+        >
+          Annuleren
+        </button>
+      </div>
+    </form>
+  );
+}
+
+interface BabyProfileDisplayProps {
+  profile: BabyProfile;
+}
+
+function BabyProfileDisplay({ profile }: BabyProfileDisplayProps) {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('nl-NL', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const calculateAge = (birthDate: string) => {
+    const birth = new Date(birthDate);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - birth.getTime());
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 7) {
+      return `${diffDays} dag${diffDays !== 1 ? 'en' : ''}`;
+    } else if (diffDays < 30) {
+      const weeks = Math.floor(diffDays / 7);
+      const remainingDays = diffDays % 7;
+      return `${weeks} we${weeks !== 1 ? 'ken' : 'ek'}${remainingDays > 0 ? ` en ${remainingDays} dag${remainingDays !== 1 ? 'en' : ''}` : ''}`;
+    } else {
+      const months = Math.floor(diffDays / 30);
+      return `${months} maand${months !== 1 ? 'en' : ''}`;
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Header with baby info */}
+      <div className="text-center pb-4 border-b border-gray-200">
+        <div className="text-4xl mb-2">
+          {profile.geslacht === 'jongen' ? '👶🏻' : profile.geslacht === 'meisje' ? '👶🏻' : '👶'}
+        </div>
+        <h5 className="text-xl font-bold text-gray-900">
+          {profile.roepnaam || profile.voornaam} {profile.achternaam}
+        </h5>
+        <p className="text-indigo-600 font-medium mt-1">
+          {calculateAge(profile.geboortedatum)} oud
+        </p>
+      </div>
+
+      {/* Key Information */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-gray-50 p-3 rounded-lg">
+          <h6 className="font-medium text-gray-900 text-sm">Geboren</h6>
+          <p className="text-gray-700">
+            {formatDate(profile.geboortedatum)}
+            {profile.geboortijd && ` om ${profile.geboortijd}`}
+          </p>
+        </div>
+
+        {profile.geboortgewicht && (
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <h6 className="font-medium text-gray-900 text-sm">Geboortegewicht</h6>
+            <p className="text-gray-700">{profile.geboortgewicht} gram</p>
+          </div>
+        )}
+
+        {profile.geboortelengte && (
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <h6 className="font-medium text-gray-900 text-sm">Geboortelengte</h6>
+            <p className="text-gray-700">{profile.geboortelengte} cm</p>
+          </div>
+        )}
+
+        <div className="bg-gray-50 p-3 rounded-lg">
+          <h6 className="font-medium text-gray-900 text-sm">Geslacht</h6>
+          <p className="text-gray-700 capitalize">{profile.geslacht}</p>
+        </div>
+      </div>
+
+      {/* Care Providers */}
+      {(profile.huisarts || profile.verloskundige) && (
+        <div className="border-t border-gray-200 pt-4">
+          <h6 className="font-medium text-gray-900 mb-2">Zorgverlening</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {profile.huisarts && (
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <span className="text-sm font-medium text-gray-900">Huisarts: </span>
+                <span className="text-gray-700">{profile.huisarts}</span>
+              </div>
+            )}
+            {profile.verloskundige && (
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <span className="text-sm font-medium text-gray-900">Verloskundige: </span>
+                <span className="text-gray-700">{profile.verloskundige}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Additional Notes */}
+      {profile.bijzonderheden && (
+        <div className="border-t border-gray-200 pt-4">
+          <h6 className="font-medium text-gray-900 mb-2">Bijzonderheden</h6>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <p className="text-gray-700 text-sm whitespace-pre-wrap">{profile.bijzonderheden}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
