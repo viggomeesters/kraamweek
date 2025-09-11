@@ -1,4 +1,4 @@
-import { AppData, BabyRecord, MotherRecord, FamilyObservation, Task, Alert, User } from '@/types';
+import { AppData, BabyRecord, MotherRecord, FamilyObservation, Task, Alert, User, BabyProfile } from '@/types';
 
 const STORAGE_KEY = 'kraamweek-data';
 const USER_KEY = 'kraamweek-user';
@@ -10,6 +10,7 @@ const getInitialData = (): AppData => ({
   familyObservations: [],
   tasks: [],
   alerts: [],
+  babyProfile: undefined, // No profile by default
 });
 
 export class DataService {
@@ -283,6 +284,35 @@ export class DataService {
         createdBy: 'parents',
       });
     }
+  }
+
+  // Baby Profile management
+  static getBabyProfile(): BabyProfile | null {
+    const data = this.loadData();
+    return data.babyProfile || null;
+  }
+
+  static saveBabyProfile(profile: Omit<BabyProfile, 'id' | 'createdAt' | 'updatedAt'>): BabyProfile {
+    const data = this.loadData();
+    const now = new Date().toISOString();
+    
+    const newProfile: BabyProfile = {
+      ...profile,
+      id: data.babyProfile?.id || Date.now().toString(),
+      createdAt: data.babyProfile?.createdAt || now,
+      updatedAt: now,
+    };
+    
+    data.babyProfile = newProfile;
+    this.saveData(data);
+    
+    return newProfile;
+  }
+
+  static deleteBabyProfile(): void {
+    const data = this.loadData();
+    data.babyProfile = undefined;
+    this.saveData(data);
   }
 
   // Utility methods

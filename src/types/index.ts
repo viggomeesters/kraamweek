@@ -55,6 +55,29 @@ export interface Task {
   suggestedBy?: string; // if parents suggest a task
 }
 
+export interface BabyProfile {
+  id: string;
+  voornaam: string;
+  achternaam: string;
+  roepnaam?: string;
+  geslacht: 'jongen' | 'meisje' | 'onbekend';
+  geboortedatum: string; // ISO date string
+  geboortijd?: string; // HH:MM format
+  geboortgewicht?: number; // in grams
+  geboortelengte?: number; // in cm
+  hoofdomvang?: number; // in cm
+  goedeStartScore?: number; // APGAR score
+  zwangerschapsduur?: number; // in weeks
+  moederNaam?: string;
+  partnerNaam?: string;
+  huisarts?: string;
+  verloskundige?: string;
+  ziekenhuis?: string;
+  bijzonderheden?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Alert {
   id: string;
   timestamp: string;
@@ -74,6 +97,7 @@ export interface AppData {
   familyObservations: FamilyObservation[];
   tasks: Task[];
   alerts: Alert[];
+  babyProfile?: BabyProfile; // Single baby profile
 }
 
 export type UserRole = 'parents' | 'kraamhulp';

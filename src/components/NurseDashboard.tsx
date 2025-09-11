@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { AppData, Alert, BabyRecord, MotherRecord, FamilyObservation, Task } from '@/types';
+import { AppData, Alert, BabyRecord, MotherRecord, FamilyObservation, Task, BabyProfile } from '@/types';
 import { DataService } from '@/lib/dataService';
 
 export default function NurseDashboard() {
   const [data, setData] = useState<AppData>(DataService.loadData());
-  const [activeTab, setActiveTab] = useState<'overview' | 'mother' | 'observations' | 'tasks'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'mother' | 'observations' | 'tasks' | 'profile'>('overview');
 
   const refreshData = () => {
     setData(DataService.loadData());
@@ -66,10 +66,11 @@ export default function NurseDashboard() {
             { id: 'mother', label: 'Moeder', icon: '👩' },
             { id: 'observations', label: 'Observaties', icon: '📋' },
             { id: 'tasks', label: 'Taken', icon: '✅' },
+            { id: 'profile', label: 'Baby Profiel', icon: '📄' },
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as 'overview' | 'mother' | 'observations' | 'tasks')}
+              onClick={() => setActiveTab(tab.id as 'overview' | 'mother' | 'observations' | 'tasks' | 'profile')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
                   ? 'border-indigo-500 text-indigo-600'
@@ -94,6 +95,9 @@ export default function NurseDashboard() {
       )}
       {activeTab === 'tasks' && (
         <TasksSection tasks={data.tasks} onRefresh={refreshData} />
+      )}
+      {activeTab === 'profile' && (
+        <BabyProfileSection onRefresh={refreshData} />
       )}
     </div>
   );
@@ -1406,5 +1410,23 @@ function JaundiceAssessmentForm({ onSubmit, onCancel }: JaundiceAssessmentFormPr
         </button>
       </div>
     </form>
+  );
+}
+
+// Baby Profile Components added for requirement #8
+// ... (components will be added via editor)
+
+function BabyProfileSection({ onRefresh }: { onRefresh: () => void }) {
+  return (
+    <div className="space-y-6">
+      <h3 className="text-xl font-semibold text-gray-900">Baby Profiel</h3>
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="text-center py-8">
+          <div className="text-6xl mb-4">👶</div>
+          <h4 className="text-lg font-medium text-gray-900 mb-2">Baby Profiel - Coming Soon</h4>
+          <p className="text-gray-600">Deze functionaliteit wordt binnenkort toegevoegd.</p>
+        </div>
+      </div>
+    </div>
   );
 }
