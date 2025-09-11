@@ -6,7 +6,6 @@ import { DataService } from '@/lib/dataService';
 import UserSelector from '@/components/UserSelector';
 import DashboardLayout from '@/components/DashboardLayout';
 import ParentDashboard from '@/components/ParentDashboard';
-import NurseDashboard from '@/components/NurseDashboard';
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -44,11 +43,7 @@ export default function Home() {
 
   return (
     <DashboardLayout user={user} onLogout={handleLogout}>
-      {user.role === 'parents' ? (
-        <ParentDashboard />
-      ) : (
-        <NurseDashboard />
-      )}
+      <ParentDashboard user={user} />
     </DashboardLayout>
   );
 }
