@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { BabyRecord, AppData, BabyProfile } from '@/types';
 import { DataService } from '@/lib/dataService';
 import { AnalyticsSection } from './Analytics';
+import FloatingActionButton from './FloatingActionButton';
+import BottomNavigation from './BottomNavigation';
+import MobileOverview from './MobileOverview';
 
 // Utility functions for date/time inputs
 const getCurrentDate = () => new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -13,7 +16,7 @@ const createTimestamp = (date: string, time: string) => new Date(`${date}T${time
 export default function ParentDashboard() {
   const [data, setData] = useState<AppData>(DataService.loadData());
   const [activeForm, setActiveForm] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'logging' | 'recent' | 'profile' | 'analytics'>('logging');
+  const [activeTab, setActiveTab] = useState<'recent' | 'overview' | 'analytics' | 'profile'>('recent');
 
   const refreshData = () => {
     setData(DataService.loadData());
@@ -23,6 +26,8 @@ export default function ParentDashboard() {
     DataService.addBabyRecord(record);
     refreshData();
     setActiveForm(null);
+    // Switch to recent tab to show the newly added record
+    setActiveTab('recent');
   };
 
   // Get recent records for display - sort by entry order (most recently entered first)
@@ -31,166 +36,89 @@ export default function ParentDashboard() {
     .slice(0, 10); // Take first 10 (most recently entered)
 
   return (
-    <div className="space-y-6">
-      {/* Navigation Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          {[
-            { id: 'logging', label: 'Registreren', icon: '📝' },
-            { id: 'recent', label: 'Overzicht', icon: '📋' },
-            { id: 'analytics', label: 'Analytics', icon: '📊' },
-            { id: 'profile', label: 'Baby Profiel', icon: '📄' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as 'logging' | 'recent' | 'profile' | 'analytics')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              {tab.icon} {tab.label}
-            </button>
-          ))}
-        </nav>
+    <>
+      <div className="space-y-4">
+        {/* Tab Content */}
+        {activeTab === 'recent' && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-gray-900">
+              Recente registraties
+            </h2>
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              {recentRecords.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="text-4xl mb-2">📋</div>
+                  <p>Nog geen registraties</p>
+                  <p className="text-sm mt-1">Gebruik de + knop om een registratie toe te voegen</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {recentRecords.map((record) => (
+                    <RecordItem key={record.id} record={record} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'overview' && (
+          <MobileOverview records={data.babyRecords} />
+        )}
+
+        {activeTab === 'analytics' && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-gray-900">Analytics</h2>
+            <AnalyticsSection babyRecords={data.babyRecords} motherRecords={data.motherRecords} />
+          </div>
+        )}
+
+        {activeTab === 'profile' && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-gray-900">Baby profiel</h2>
+            <BabyProfileSection onRefresh={refreshData} />
+          </div>
+        )}
+
+        {/* Form Modal */}
+        {activeForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-96 overflow-y-auto">
+              <div className="p-6">
+                {activeForm === 'sleep' && (
+                  <SleepForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
+                )}
+                {activeForm === 'feeding' && (
+                  <FeedingForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
+                )}
+                {activeForm === 'pumping' && (
+                  <PumpingForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
+                )}
+                {activeForm === 'temperature' && (
+                  <TemperatureForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
+                )}
+                {activeForm === 'diaper' && (
+                  <DiaperForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
+                )}
+                {activeForm === 'note' && (
+                  <NoteForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'logging' && (
-        <div className="space-y-8">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Baby gegevens registreren
-            </h2>
-            
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-              <ActionButton
-                icon="😴"
-                title="Slaap"
-                onClick={() => setActiveForm('sleep')}
-                active={activeForm === 'sleep'}
-              />
-              <ActionButton
-                icon="🍼"
-                title="Voeding"
-                onClick={() => setActiveForm('feeding')}
-                active={activeForm === 'feeding'}
-              />
-              <ActionButton
-                icon="🥛"
-                title="Kolven"
-                onClick={() => setActiveForm('pumping')}
-                active={activeForm === 'pumping'}
-              />
-              <ActionButton
-                icon="🌡️"
-                title="Temperatuur"
-                onClick={() => setActiveForm('temperature')}
-                active={activeForm === 'temperature'}
-              />
-              <ActionButton
-                icon="👶"
-                title="Luier"
-                onClick={() => setActiveForm('diaper')}
-                active={activeForm === 'diaper'}
-              />
-              <ActionButton
-                icon="📝"
-                title="Notitie"
-                onClick={() => setActiveForm('note')}
-                active={activeForm === 'note'}
-              />
-            </div>
+      {/* Floating Action Button */}
+      <FloatingActionButton onActionSelect={(action) => setActiveForm(action)} />
 
-            {/* Forms */}
-            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-              {activeForm === 'sleep' && (
-                <SleepForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
-              )}
-              {activeForm === 'feeding' && (
-                <FeedingForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
-              )}
-              {activeForm === 'pumping' && (
-                <PumpingForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
-              )}
-              {activeForm === 'temperature' && (
-                <TemperatureForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
-              )}
-              {activeForm === 'diaper' && (
-                <DiaperForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
-              )}
-              {activeForm === 'note' && (
-                <NoteForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
-              )}
-              {!activeForm && (
-                <p className="text-gray-500 text-center py-8">
-                  Selecteer een actie hierboven om een registratie toe te voegen
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'recent' && (
-        <div className="space-y-6">
-          <h3 className="text-xl font-semibold text-gray-900">
-            Recente registraties
-          </h3>
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            {recentRecords.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">
-                Nog geen registraties
-              </p>
-            ) : (
-              <div className="divide-y divide-gray-200">
-                {recentRecords.map((record) => (
-                  <RecordItem key={record.id} record={record} />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'analytics' && (
-        <AnalyticsSection babyRecords={data.babyRecords} motherRecords={data.motherRecords} />
-      )}
-
-      {activeTab === 'profile' && (
-        <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">
-            Baby profiel
-          </h3>
-          <BabyProfileSection onRefresh={refreshData} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface ActionButtonProps {
-  icon: string;
-  title: string;
-  onClick: () => void;
-  active: boolean;
-}
-
-function ActionButton({ icon, title, onClick, active }: ActionButtonProps) {
-  return (
-    <button
-      onClick={onClick}
-      className={`p-4 rounded-lg border-2 transition-all ${
-        active
-          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-          : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
-      }`}
-    >
-      <div className="text-2xl mb-2">{icon}</div>
-      <div className="text-sm font-medium">{title}</div>
-    </button>
+      {/* Bottom Navigation */}
+      <BottomNavigation 
+        activeTab={activeTab} 
+        onTabChange={(tab) => setActiveTab(tab as 'recent' | 'overview' | 'analytics' | 'profile')}
+        userRole="parents"
+      />
+    </>
   );
 }
 
@@ -204,8 +132,7 @@ function SleepForm({ onSubmit, onCancel }: FormProps) {
   const [endTime, setEndTime] = useState(getCurrentTime); // Default to current time
   const [duration, setDuration] = useState(60);
   const [notes, setNotes] = useState('');
-  const [date, setDate] = useState(getCurrentDate);
-  const [showDateControls, setShowDateControls] = useState(false);
+  const [date] = useState(getCurrentDate);
 
   // Auto-calculate start time when component mounts (end time defaults to now, duration is 60 min)
   useEffect(() => {
@@ -299,7 +226,16 @@ function SleepForm({ onSubmit, onCancel }: FormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <h3 className="text-lg font-medium">Slaap registreren</h3>
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">😴 Slaap registreren</h3>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          ✕
+        </button>
+      </div>
       
       {/* Sleep Duration Slider */}
       <div>
@@ -322,10 +258,10 @@ function SleepForm({ onSubmit, onCancel }: FormProps) {
       </div>
 
       {/* Time Selection */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Begintijd (wanneer ging baby slapen)
+            Begintijd
           </label>
           <input
             type="time"
@@ -336,7 +272,7 @@ function SleepForm({ onSubmit, onCancel }: FormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Eindtijd (wanneer werd baby wakker)
+            Eindtijd
           </label>
           <input
             type="time"
@@ -347,36 +283,6 @@ function SleepForm({ onSubmit, onCancel }: FormProps) {
         </div>
       </div>
 
-      <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
-        💡 <strong>Tip:</strong> Vul de begintijd, eindtijd of slaapduur in - de andere velden worden automatisch berekend!
-      </div>
-
-      {/* Collapsible Date Section */}
-      <div>
-        <button
-          type="button"
-          onClick={() => setShowDateControls(!showDateControls)}
-          className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 focus:outline-none"
-        >
-          <span className="mr-1">{showDateControls ? '▼' : '▶'}</span>
-          Tijdstip aanpassen?
-        </button>
-        
-        {showDateControls && (
-          <div className="mt-3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Datum
-            </label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-              required
-            />
-          </div>
-        )}
-      </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Notities (optioneel)
@@ -385,20 +291,21 @@ function SleepForm({ onSubmit, onCancel }: FormProps) {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-          rows={3}
+          rows={2}
         />
       </div>
+      
       <div className="flex space-x-3">
         <button
           type="submit"
-          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           Opslaan
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+          className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
         >
           Annuleren
         </button>
@@ -411,9 +318,8 @@ function FeedingForm({ onSubmit, onCancel }: FormProps) {
   const [feedingType, setFeedingType] = useState<'bottle' | 'breast_left' | 'breast_right' | 'breast_both'>('bottle');
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
-  const [date, setDate] = useState(getCurrentDate);
-  const [time, setTime] = useState(getCurrentTime);
-  const [showDateControls, setShowDateControls] = useState(false);
+  const [date] = useState(getCurrentDate);
+  const [time] = useState(getCurrentTime);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -428,64 +334,73 @@ function FeedingForm({ onSubmit, onCancel }: FormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <h3 className="text-lg font-medium">Voeding registreren</h3>
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">🍼 Voeding registreren</h3>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          ✕
+        </button>
+      </div>
       
       {/* Feeding Type Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-3">
           Type voeding
         </label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={() => setFeedingType('bottle')}
-            className={`p-4 rounded-lg border-2 text-center transition-colors ${
+            className={`p-3 rounded-lg border-2 text-center transition-colors ${
               feedingType === 'bottle'
                 ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                 : 'border-gray-300 bg-white hover:bg-gray-50'
             }`}
           >
-            <div className="text-2xl mb-1">🍼</div>
-            <div className="font-medium">Fles</div>
+            <div className="text-xl mb-1">🍼</div>
+            <div className="text-sm font-medium">Fles</div>
           </button>
           
           <button
             type="button"
             onClick={() => setFeedingType('breast_left')}
-            className={`p-4 rounded-lg border-2 text-center transition-colors ${
+            className={`p-3 rounded-lg border-2 text-center transition-colors ${
               feedingType === 'breast_left'
                 ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                 : 'border-gray-300 bg-white hover:bg-gray-50'
             }`}
           >
-            <div className="text-2xl mb-1">🤱</div>
-            <div className="font-medium">Linker borst</div>
+            <div className="text-xl mb-1">🤱</div>
+            <div className="text-sm font-medium">Links</div>
           </button>
           
           <button
             type="button"
             onClick={() => setFeedingType('breast_right')}
-            className={`p-4 rounded-lg border-2 text-center transition-colors ${
+            className={`p-3 rounded-lg border-2 text-center transition-colors ${
               feedingType === 'breast_right'
                 ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                 : 'border-gray-300 bg-white hover:bg-gray-50'
             }`}
           >
-            <div className="text-2xl mb-1">🤱</div>
-            <div className="font-medium">Rechter borst</div>
+            <div className="text-xl mb-1">🤱</div>
+            <div className="text-sm font-medium">Rechts</div>
           </button>
           
           <button
             type="button"
             onClick={() => setFeedingType('breast_both')}
-            className={`p-4 rounded-lg border-2 text-center transition-colors ${
+            className={`p-3 rounded-lg border-2 text-center transition-colors ${
               feedingType === 'breast_both'
                 ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                 : 'border-gray-300 bg-white hover:bg-gray-50'
             }`}
           >
-            <div className="text-2xl mb-1">🤱</div>
-            <div className="font-medium">Beide borsten</div>
+            <div className="text-xl mb-1">🤱</div>
+            <div className="text-sm font-medium">Beide</div>
           </button>
         </div>
       </div>
@@ -507,46 +422,6 @@ function FeedingForm({ onSubmit, onCancel }: FormProps) {
         </div>
       )}
 
-      {/* Collapsible Date/Time Section */}
-      <div>
-        <button
-          type="button"
-          onClick={() => setShowDateControls(!showDateControls)}
-          className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 focus:outline-none"
-        >
-          <span className="mr-1">{showDateControls ? '▼' : '▶'}</span>
-          Tijdstip aanpassen?
-        </button>
-        
-        {showDateControls && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Datum
-              </label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tijd
-              </label>
-              <input
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                required
-              />
-            </div>
-          </div>
-        )}
-      </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Notities (optioneel)
@@ -555,20 +430,21 @@ function FeedingForm({ onSubmit, onCancel }: FormProps) {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-          rows={3}
+          rows={2}
         />
       </div>
+      
       <div className="flex space-x-3">
         <button
           type="submit"
-          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           Opslaan
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+          className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
         >
           Annuleren
         </button>
@@ -581,9 +457,8 @@ function PumpingForm({ onSubmit, onCancel }: FormProps) {
   const [breastSide, setBreastSide] = useState<'left' | 'right' | 'both'>('left');
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
-  const [date, setDate] = useState(getCurrentDate);
-  const [time, setTime] = useState(getCurrentTime);
-  const [showDateControls, setShowDateControls] = useState(false);
+  const [date] = useState(getCurrentDate);
+  const [time] = useState(getCurrentTime);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -598,14 +473,23 @@ function PumpingForm({ onSubmit, onCancel }: FormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <h3 className="text-lg font-medium">Kolven registreren</h3>
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">🥛 Kolven registreren</h3>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          ✕
+        </button>
+      </div>
       
       {/* Breast Side Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-3">
           Welke borst?
         </label>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2">
           <button
             type="button"
             onClick={() => setBreastSide('left')}
@@ -659,47 +543,6 @@ function PumpingForm({ onSubmit, onCancel }: FormProps) {
         />
       </div>
 
-      {/* Collapsible Date/Time Section */}
-      <div>
-        <button
-          type="button"
-          onClick={() => setShowDateControls(!showDateControls)}
-          className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 focus:outline-none"
-        >
-          <span className="mr-1">{showDateControls ? '▼' : '▶'}</span>
-          Tijdstip aanpassen?
-        </button>
-        
-        {showDateControls && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Datum
-              </label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tijd
-              </label>
-              <input
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                required
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Notities (optioneel)
@@ -708,21 +551,21 @@ function PumpingForm({ onSubmit, onCancel }: FormProps) {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-          rows={3}
+          rows={2}
         />
       </div>
       
       <div className="flex space-x-3">
         <button
           type="submit"
-          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           Opslaan
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+          className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
         >
           Annuleren
         </button>
@@ -734,9 +577,8 @@ function PumpingForm({ onSubmit, onCancel }: FormProps) {
 function TemperatureForm({ onSubmit, onCancel }: FormProps) {
   const [temperature, setTemperature] = useState(37.0);
   const [notes, setNotes] = useState('');
-  const [date, setDate] = useState(getCurrentDate);
-  const [time, setTime] = useState(getCurrentTime);
-  const [showDateControls, setShowDateControls] = useState(false);
+  const [date] = useState(getCurrentDate);
+  const [time] = useState(getCurrentTime);
   const [showAlert, setShowAlert] = useState(false);
   const [alertData, setAlertData] = useState<{
     type: 'high' | 'low';
@@ -819,7 +661,16 @@ function TemperatureForm({ onSubmit, onCancel }: FormProps) {
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <h3 className="text-lg font-medium">Temperatuur meten</h3>
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-medium">🌡️ Temperatuur meten</h3>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            ✕
+          </button>
+        </div>
         
         {/* Temperature Slider */}
         <div className={`p-4 rounded-md border-2 transition-colors ${getTemperatureBackgroundColor()}`}>
@@ -853,115 +704,76 @@ function TemperatureForm({ onSubmit, onCancel }: FormProps) {
           )}
         </div>
 
-        {/* Collapsible Date/Time Section */}
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Notities (optioneel)
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+            rows={2}
+          />
+        </div>
+        
+        <div className="flex space-x-3">
+          <button
+            type="submit"
+            className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            Opslaan
+          </button>
           <button
             type="button"
-            onClick={() => setShowDateControls(!showDateControls)}
-            className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 focus:outline-none"
+            onClick={onCancel}
+            className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
           >
-            <span className="mr-1">{showDateControls ? '▼' : '▶'}</span>
-            Tijdstip aanpassen?
+            Annuleren
           </button>
-          
-          {showDateControls && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Datum
-                </label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tijd
-                </label>
-                <input
-                  type="time"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                  required
-                />
-              </div>
-            </div>
-          )}
         </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Notities (optioneel)
-        </label>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-          rows={3}
-        />
-      </div>
-      <div className="flex space-x-3">
-        <button
-          type="submit"
-          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          Opslaan
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
-        >
-          Annuleren
-        </button>
-      </div>
-    </form>
+      </form>
 
-    {/* Temperature Alert Modal */}
-    {showAlert && alertData && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-96 overflow-y-auto">
-          <div className={`p-4 rounded-t-lg ${alertData.type === 'high' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
-            <div className="flex items-center">
-              <span className="text-2xl mr-2">
-                {alertData.type === 'high' ? '🌡️🔥' : '🌡️❄️'}
-              </span>
-              <h3 className="text-lg font-semibold">{alertData.message}</h3>
+      {/* Temperature Alert Modal */}
+      {showAlert && alertData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full max-h-80 overflow-y-auto">
+            <div className={`p-4 rounded-t-lg ${alertData.type === 'high' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+              <div className="flex items-center">
+                <span className="text-xl mr-2">
+                  {alertData.type === 'high' ? '🌡️🔥' : '🌡️❄️'}
+                </span>
+                <h3 className="text-md font-semibold">{alertData.message}</h3>
+              </div>
+            </div>
+            <div className="p-4">
+              <h4 className="font-medium text-gray-900 mb-2 text-sm">Wat kun je doen:</h4>
+              <ul className="space-y-1">
+                {alertData.advice.slice(0, 3).map((item, index) => (
+                  <li key={index} className="flex items-start">
+                    <span className="text-indigo-600 mr-2 flex-shrink-0">•</span>
+                    <span className="text-xs text-gray-700">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-b-lg flex justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => setShowAlert(false)}
+                className="bg-gray-300 text-gray-700 px-3 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 text-sm"
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={handleAlertAcknowledged}
+                className="bg-indigo-600 text-white px-3 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              >
+                Begrepen
+              </button>
             </div>
           </div>
-          <div className="p-4">
-            <h4 className="font-medium text-gray-900 mb-3">Wat kun je doen:</h4>
-            <ul className="space-y-2">
-              {alertData.advice.map((item, index) => (
-                <li key={index} className="flex items-start">
-                  <span className="text-indigo-600 mr-2 flex-shrink-0">•</span>
-                  <span className="text-sm text-gray-700">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="p-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={() => setShowAlert(false)}
-              className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
-            >
-              Annuleren
-            </button>
-            <button
-              onClick={handleAlertAcknowledged}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              Begrepen, toch opslaan
-            </button>
-          </div>
         </div>
-      </div>
-    )}
+      )}
     </>
   );
 }
@@ -970,9 +782,8 @@ function DiaperForm({ onSubmit, onCancel }: FormProps) {
   const [diaperType, setDiaperType] = useState<'wet' | 'dirty' | 'both'>('wet');
   const [diaperAmount, setDiaperAmount] = useState<'little' | 'medium' | 'much'>('medium');
   const [notes, setNotes] = useState('');
-  const [date, setDate] = useState(getCurrentDate);
-  const [time, setTime] = useState(getCurrentTime);
-  const [showDateControls, setShowDateControls] = useState(false);
+  const [date] = useState(getCurrentDate);
+  const [time] = useState(getCurrentTime);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -987,51 +798,60 @@ function DiaperForm({ onSubmit, onCancel }: FormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <h3 className="text-lg font-medium">Luier verschonen</h3>
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">👶 Luier verschonen</h3>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          ✕
+        </button>
+      </div>
       
       {/* Diaper Type - Easy Click Options */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-3">
           Type luier
         </label>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2">
           <button
             type="button"
             onClick={() => setDiaperType('wet')}
-            className={`p-4 rounded-lg border-2 text-center transition-colors ${
+            className={`p-3 rounded-lg border-2 text-center transition-colors ${
               diaperType === 'wet'
                 ? 'border-blue-500 bg-blue-50 text-blue-700'
                 : 'border-gray-300 bg-white hover:bg-gray-50'
             }`}
           >
-            <div className="text-2xl mb-1">💧</div>
-            <div className="font-medium">Nat</div>
+            <div className="text-xl mb-1">💧</div>
+            <div className="text-sm font-medium">Nat</div>
           </button>
           
           <button
             type="button"
             onClick={() => setDiaperType('dirty')}
-            className={`p-4 rounded-lg border-2 text-center transition-colors ${
+            className={`p-3 rounded-lg border-2 text-center transition-colors ${
               diaperType === 'dirty'
                 ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
                 : 'border-gray-300 bg-white hover:bg-gray-50'
             }`}
           >
-            <div className="text-2xl mb-1">💩</div>
-            <div className="font-medium">Vies</div>
+            <div className="text-xl mb-1">💩</div>
+            <div className="text-sm font-medium">Vies</div>
           </button>
           
           <button
             type="button"
             onClick={() => setDiaperType('both')}
-            className={`p-4 rounded-lg border-2 text-center transition-colors ${
+            className={`p-3 rounded-lg border-2 text-center transition-colors ${
               diaperType === 'both'
                 ? 'border-orange-500 bg-orange-50 text-orange-700'
                 : 'border-gray-300 bg-white hover:bg-gray-50'
             }`}
           >
-            <div className="text-2xl mb-1">💧💩</div>
-            <div className="font-medium">Beide</div>
+            <div className="text-xl mb-1">💧💩</div>
+            <div className="text-sm font-medium">Beide</div>
           </button>
         </div>
       </div>
@@ -1041,85 +861,45 @@ function DiaperForm({ onSubmit, onCancel }: FormProps) {
         <label className="block text-sm font-medium text-gray-700 mb-3">
           Hoeveelheid
         </label>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2">
           <button
             type="button"
             onClick={() => setDiaperAmount('little')}
-            className={`p-3 rounded-lg border-2 text-center transition-colors ${
+            className={`p-2 rounded-lg border-2 text-center transition-colors ${
               diaperAmount === 'little'
                 ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                 : 'border-gray-300 bg-white hover:bg-gray-50'
             }`}
           >
-            <div className="font-medium">Weinig</div>
+            <div className="text-sm font-medium">Weinig</div>
           </button>
           
           <button
             type="button"
             onClick={() => setDiaperAmount('medium')}
-            className={`p-3 rounded-lg border-2 text-center transition-colors ${
+            className={`p-2 rounded-lg border-2 text-center transition-colors ${
               diaperAmount === 'medium'
                 ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                 : 'border-gray-300 bg-white hover:bg-gray-50'
             }`}
           >
-            <div className="font-medium">Middel</div>
+            <div className="text-sm font-medium">Middel</div>
           </button>
           
           <button
             type="button"
             onClick={() => setDiaperAmount('much')}
-            className={`p-3 rounded-lg border-2 text-center transition-colors ${
+            className={`p-2 rounded-lg border-2 text-center transition-colors ${
               diaperAmount === 'much'
                 ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                 : 'border-gray-300 bg-white hover:bg-gray-50'
             }`}
           >
-            <div className="font-medium">Veel</div>
+            <div className="text-sm font-medium">Veel</div>
           </button>
         </div>
       </div>
 
-      {/* Collapsible Date/Time Section */}
-      <div>
-        <button
-          type="button"
-          onClick={() => setShowDateControls(!showDateControls)}
-          className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 focus:outline-none"
-        >
-          <span className="mr-1">{showDateControls ? '▼' : '▶'}</span>
-          Tijdstip aanpassen?
-        </button>
-        
-        {showDateControls && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Datum
-              </label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tijd
-              </label>
-              <input
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                required
-              />
-            </div>
-          </div>
-        )}
-      </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Notities (optioneel)
@@ -1128,20 +908,21 @@ function DiaperForm({ onSubmit, onCancel }: FormProps) {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-          rows={3}
+          rows={2}
         />
       </div>
+      
       <div className="flex space-x-3">
         <button
           type="submit"
-          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           Opslaan
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+          className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
         >
           Annuleren
         </button>
@@ -1166,28 +947,37 @@ function NoteForm({ onSubmit, onCancel }: FormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <h3 className="text-lg font-medium">Notitie toevoegen</h3>
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">📝 Notitie toevoegen</h3>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          ✕
+        </button>
+      </div>
       
       {/* Note Category Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-3">
           Type notitie
         </label>
-        <div className="grid grid-cols-1 gap-3">
+        <div className="space-y-2">
           <button
             type="button"
             onClick={() => setNoteCategory('general')}
-            className={`p-3 rounded-lg border-2 text-left transition-colors ${
+            className={`w-full p-3 rounded-lg border-2 text-left transition-colors ${
               noteCategory === 'general'
                 ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                 : 'border-gray-300 bg-white hover:bg-gray-50'
             }`}
           >
             <div className="flex items-center">
-              <span className="text-xl mr-3">📝</span>
+              <span className="text-lg mr-3">📝</span>
               <div>
-                <div className="font-medium">Algemene notitie</div>
-                <div className="text-sm opacity-75">Voor jezelf bijhouden</div>
+                <div className="font-medium text-sm">Algemene notitie</div>
+                <div className="text-xs opacity-75">Voor jezelf bijhouden</div>
               </div>
             </div>
           </button>
@@ -1195,17 +985,17 @@ function NoteForm({ onSubmit, onCancel }: FormProps) {
           <button
             type="button"
             onClick={() => setNoteCategory('question')}
-            className={`p-3 rounded-lg border-2 text-left transition-colors ${
+            className={`w-full p-3 rounded-lg border-2 text-left transition-colors ${
               noteCategory === 'question'
                 ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
                 : 'border-gray-300 bg-white hover:bg-gray-50'
             }`}
           >
             <div className="flex items-center">
-              <span className="text-xl mr-3">❓</span>
+              <span className="text-lg mr-3">❓</span>
               <div>
-                <div className="font-medium">Vraag aan kraamhulp</div>
-                <div className="text-sm opacity-75">Vraag over ontwikkeling of verzorging</div>
+                <div className="font-medium text-sm">Vraag aan kraamhulp</div>
+                <div className="text-xs opacity-75">Vraag over ontwikkeling of verzorging</div>
               </div>
             </div>
           </button>
@@ -1213,17 +1003,17 @@ function NoteForm({ onSubmit, onCancel }: FormProps) {
           <button
             type="button"
             onClick={() => setNoteCategory('todo')}
-            className={`p-3 rounded-lg border-2 text-left transition-colors ${
+            className={`w-full p-3 rounded-lg border-2 text-left transition-colors ${
               noteCategory === 'todo'
                 ? 'border-green-500 bg-green-50 text-green-700'
                 : 'border-gray-300 bg-white hover:bg-gray-50'
             }`}
           >
             <div className="flex items-center">
-              <span className="text-xl mr-3">✅</span>
+              <span className="text-lg mr-3">✅</span>
               <div>
-                <div className="font-medium">Verzoek aan kraamhulp</div>
-                <div className="text-sm opacity-75">Bijvoorbeeld: was draaien, boodschappen</div>
+                <div className="font-medium text-sm">Verzoek aan kraamhulp</div>
+                <div className="text-xs opacity-75">Bijvoorbeeld: was draaien, boodschappen</div>
               </div>
             </div>
           </button>
@@ -1240,7 +1030,7 @@ function NoteForm({ onSubmit, onCancel }: FormProps) {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-          rows={4}
+          rows={3}
           placeholder={
             noteCategory === 'general' ? 'Typ hier je notitie...' :
             noteCategory === 'question' ? 'Bijv: Hoe vaak moet ik baby verschonen?' :
@@ -1250,27 +1040,17 @@ function NoteForm({ onSubmit, onCancel }: FormProps) {
         />
       </div>
       
-      {(noteCategory === 'question' || noteCategory === 'todo') && (
-        <div className="bg-blue-50 p-3 rounded-md">
-          <div className="flex items-start">
-            <span className="text-blue-600 mr-2">ℹ️</span>
-            <div className="text-sm text-blue-800">
-              <strong>Let op:</strong> Deze {noteCategory === 'question' ? 'vraag' : 'taak'} wordt doorgestuurd naar de kraamhulp en verschijnt in haar takenoverzicht.
-            </div>
-          </div>
-        </div>
-      )}
       <div className="flex space-x-3">
         <button
           type="submit"
-          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           Opslaan
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+          className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
         >
           Annuleren
         </button>
