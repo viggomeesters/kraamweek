@@ -4,11 +4,12 @@ import { useState } from 'react';
 import { AppData, Alert, BabyRecord, MotherRecord, FamilyObservation, Task, BabyProfile } from '@/types';
 import { DataService } from '@/lib/dataService';
 import { AnalyticsSection } from './Analytics';
+import BottomNavigation from './BottomNavigation';
+import MobileOverview from './MobileOverview';
 
 export default function NurseDashboard() {
   const [data, setData] = useState<AppData>(DataService.loadData());
-
-  const [activeTab, setActiveTab] = useState<'overview' | 'mother' | 'observations' | 'tasks' | 'profile' | 'analytics' | 'alert_history'>('overview');
+  const [activeTab, setActiveTab] = useState<'recent' | 'overview' | 'analytics' | 'profile'>('recent');
 
   const refreshData = () => {
     setData(DataService.loadData());
@@ -17,81 +18,88 @@ export default function NurseDashboard() {
   // Get unacknowledged alerts
   const unacknowledgedAlerts = data.alerts.filter(alert => !alert.acknowledged);
 
+  // Get recent records for display - sort by entry order (most recently entered first)
+  const recentRecords = data.babyRecords
+    .sort((a, b) => parseInt(b.id) - parseInt(a.id)) // Sort by ID (entry order) 
+    .slice(0, 10); // Take first 10 (most recently entered)
+
   return (
-    <div className="space-y-6">
-      {/* Alerts Section */}
-      {unacknowledgedAlerts.length > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-red-800 mb-3 flex items-center">
-            ⚠️ Waarschuwingen ({unacknowledgedAlerts.length})
-          </h3>
-          <div className="space-y-2">
-            {unacknowledgedAlerts.map((alert) => (
-              <AlertItem 
-                key={alert.id} 
-                alert={alert} 
-                onAcknowledge={(comment) => {
-                  DataService.acknowledgeAlert(alert.id, 'Kraamhulp', comment);
-                  refreshData();
-                }} 
-              />
-            ))}
+    <>
+      <div className="space-y-4">
+        {/* Alerts Section */}
+        {unacknowledgedAlerts.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-red-800 mb-3 flex items-center">
+              ⚠️ Waarschuwingen ({unacknowledgedAlerts.length})
+            </h3>
+            <div className="space-y-2">
+              {unacknowledgedAlerts.map((alert) => (
+                <AlertItem 
+                  key={alert.id} 
+                  alert={alert} 
+                  onAcknowledge={(comment) => {
+                    DataService.acknowledgeAlert(alert.id, 'Kraamhulp', comment);
+                    refreshData();
+                  }} 
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Navigation Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          {[
-            { id: 'overview', label: 'Baby Overzicht', icon: '👶' },
-            { id: 'mother', label: 'Moeder', icon: '👩' },
-            { id: 'observations', label: 'Observaties', icon: '📋' },
-            { id: 'tasks', label: 'Taken', icon: '✅' },
-            { id: 'alert_history', label: 'Waarschuwingen Geschiedenis', icon: '📊' },
-            { id: 'profile', label: 'Baby Profiel', icon: '📄' },
-            { id: 'analytics', label: 'Analytics', icon: '📊' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
+        {/* Tab Content */}
+        {activeTab === 'recent' && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-gray-900">
+              Recente registraties
+            </h2>
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              {recentRecords.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="text-4xl mb-2">📋</div>
+                  <p>Nog geen registraties</p>
+                  <p className="text-sm mt-1">Wacht op nieuwe registraties van ouders</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {recentRecords.map((record) => (
+                    <RecordItem key={record.id} record={record} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
-              onClick={() => setActiveTab(tab.id as 'overview' | 'mother' | 'observations' | 'tasks' | 'profile' | 'analytics' | 'alert_history')}
+        {activeTab === 'overview' && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-gray-900">Baby Overzicht</h2>
+            <BabyOverview records={data.babyRecords} />
+          </div>
+        )}
 
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              {tab.icon} {tab.label}
-            </button>
-          ))}
-        </nav>
+        {activeTab === 'analytics' && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-gray-900">Analytics</h2>
+            <AnalyticsSection babyRecords={data.babyRecords} motherRecords={data.motherRecords} />
+          </div>
+        )}
+
+        {activeTab === 'profile' && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-gray-900">Baby profiel</h2>
+            <BabyProfileSection onRefresh={refreshData} />
+          </div>
+        )}
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'overview' && (
-        <BabyOverview records={data.babyRecords} />
-      )}
-      {activeTab === 'mother' && (
-        <MotherSection records={data.motherRecords} onRefresh={refreshData} />
-      )}
-      {activeTab === 'observations' && (
-        <ObservationsSection observations={data.familyObservations} onRefresh={refreshData} />
-      )}
-      {activeTab === 'tasks' && (
-        <TasksSection tasks={data.tasks} onRefresh={refreshData} />
-      )}
-      {activeTab === 'alert_history' && (
-        <AlertHistorySection alerts={data.alerts} />
-      )}
-      {activeTab === 'profile' && (
-        <BabyProfileSection onRefresh={refreshData} />
-      )}
-      {activeTab === 'analytics' && (
-        <AnalyticsSection babyRecords={data.babyRecords} motherRecords={data.motherRecords} />
-      )}
-    </div>
+      {/* Bottom Navigation */}
+      <BottomNavigation 
+        activeTab={activeTab} 
+        onTabChange={(tab) => setActiveTab(tab as 'recent' | 'overview' | 'analytics' | 'profile')}
+        userRole="kraamhulp"
+      />
+    </>
   );
 }
 
@@ -2321,6 +2329,79 @@ function BabyProfileDisplay({ profile }: BabyProfileDisplayProps) {
         {profile.updatedAt !== profile.createdAt && (
           <p>Laatst bijgewerkt: {formatDate(profile.updatedAt)}</p>
         )}
+      </div>
+    </div>
+  );
+}
+
+interface RecordItemProps {
+  record: BabyRecord;
+}
+
+function RecordItem({ record }: RecordItemProps) {
+  const getRecordDisplay = () => {
+    const time = new Date(record.timestamp).toLocaleTimeString('nl-NL', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    const date = new Date(record.timestamp).toLocaleDateString('nl-NL');
+
+    switch (record.type) {
+      case 'sleep':
+        return { icon: '😴', text: `Slaap: ${record.duration} min`, time, date };
+      case 'feeding':
+        if (record.feedingType === 'bottle') {
+          return { icon: '🍼', text: `Voeding: ${record.amount} ml (fles)`, time, date };
+        } else if (record.feedingType === 'breast_left') {
+          return { icon: '🤱', text: `Voeding: linker borst`, time, date };
+        } else if (record.feedingType === 'breast_right') {
+          return { icon: '🤱', text: `Voeding: rechter borst`, time, date };
+        } else if (record.feedingType === 'breast_both') {
+          return { icon: '🤱', text: `Voeding: beide borsten`, time, date };
+        }
+        return { icon: '🍼', text: `Voeding`, time, date };
+      case 'pumping':
+        const sideText = record.breastSide === 'both' ? 'beide borsten' : 
+                        record.breastSide === 'left' ? 'linker borst' : 'rechter borst';
+        return { icon: '🥛', text: `Kolven: ${record.amount} ml (${sideText})`, time, date };
+      case 'temperature':
+        const tempValue = record.value as number;
+        const tempIcon = tempValue >= 38.5 ? '🌡️🔥' : tempValue <= 35.0 ? '🌡️❄️' : '🌡️';
+        const tempText = `Temperatuur: ${record.value}°C${tempValue >= 38.5 ? ' (Extreem hoog!)' : tempValue <= 35.0 ? ' (Extreem laag!)' : tempValue >= 37.6 ? ' (Verhoogd)' : ''}`;
+        return { icon: tempIcon, text: tempText, time, date };
+      case 'diaper':
+        const amountText = record.diaperAmount ? ` (${record.diaperAmount})` : '';
+        return { icon: '👶', text: `Luier: ${record.diaperType}${amountText}`, time, date };
+      case 'note':
+        const categoryIcon = record.noteCategory === 'question' ? '❓' : 
+                           record.noteCategory === 'todo' ? '✅' : '📝';
+        const categoryText = record.noteCategory === 'question' ? 'Vraag' :
+                           record.noteCategory === 'todo' ? 'Verzoek' : 'Notitie';
+        return { icon: categoryIcon, text: categoryText, time, date };
+      default:
+        return { icon: '📋', text: record.type, time, date };
+    }
+  };
+
+  const { icon, text, time, date } = getRecordDisplay();
+
+  return (
+    <div className="p-4 hover:bg-gray-50 transition-colors">
+      <div className="flex items-start justify-between">
+        <div className="flex items-start space-x-3">
+          <span className="text-lg flex-shrink-0">{icon}</span>
+          <div className="min-w-0 flex-1">
+            <div className="font-medium text-gray-900 text-sm">{text}</div>
+            {record.notes && (
+              <div className="text-sm text-gray-600 mt-1 line-clamp-2">{record.notes}</div>
+            )}
+          </div>
+        </div>
+        <div className="text-right text-xs text-gray-500 flex-shrink-0 ml-3">
+          <div>{time}</div>
+          <div>{date}</div>
+        </div>
       </div>
     </div>
   );
