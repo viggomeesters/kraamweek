@@ -3,11 +3,12 @@
 export interface BabyRecord {
   id: string;
   timestamp: string;
-  type: 'sleep' | 'feeding' | 'temperature' | 'diaper' | 'jaundice' | 'note' | 'pumping';
+  type: 'sleep' | 'feeding' | 'temperature' | 'diaper' | 'jaundice' | 'note' | 'pumping' | 'weight';
   value?: string | number;
   notes?: string;
   duration?: number; // for sleep in minutes
   amount?: number; // for feeding in ml or pumping in ml
+  weight?: number; // for weight in grams
   diaperType?: 'wet' | 'dirty' | 'both';
   diaperAmount?: 'little' | 'medium' | 'much'; // amount of wetness/dirt
   jaundiceLevel?: 1 | 2 | 3 | 4 | 5; // 1=light, 5=severe
