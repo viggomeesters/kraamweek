@@ -6,7 +6,7 @@ import { DataService } from '@/lib/dataService';
 
 export default function NurseDashboard() {
   const [data, setData] = useState<AppData>(DataService.loadData());
-  const [activeTab, setActiveTab] = useState<'overview' | 'mother' | 'observations' | 'tasks' | 'profile'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'mother' | 'observations' | 'tasks' | 'profile' | 'alert_history'>('overview');
 
   const refreshData = () => {
     setData(DataService.loadData());
