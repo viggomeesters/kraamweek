@@ -3,13 +3,17 @@
 export interface BabyRecord {
   id: string;
   timestamp: string;
-  type: 'sleep' | 'feeding' | 'temperature' | 'diaper' | 'jaundice' | 'note';
+  type: 'sleep' | 'feeding' | 'temperature' | 'diaper' | 'jaundice' | 'note' | 'pumping';
   value?: string | number;
   notes?: string;
   duration?: number; // for sleep in minutes
-  amount?: number; // for feeding in ml
+  amount?: number; // for feeding in ml or pumping in ml
   diaperType?: 'wet' | 'dirty' | 'both';
+  diaperAmount?: 'little' | 'medium' | 'much'; // amount of wetness/dirt
   jaundiceLevel?: 1 | 2 | 3 | 4 | 5; // 1=light, 5=severe
+  feedingType?: 'bottle' | 'breast_left' | 'breast_right' | 'breast_both'; // feeding method
+  breastSide?: 'left' | 'right' | 'both'; // for pumping
+  noteCategory?: 'general' | 'question' | 'todo'; // categorized notes
 }
 
 export interface MotherRecord {

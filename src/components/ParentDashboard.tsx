@@ -50,6 +50,12 @@ export default function ParentDashboard() {
             active={activeForm === 'feeding'}
           />
           <ActionButton
+            icon="🥛"
+            title="Kolven"
+            onClick={() => setActiveForm('pumping')}
+            active={activeForm === 'pumping'}
+          />
+          <ActionButton
             icon="🌡️"
             title="Temperatuur"
             onClick={() => setActiveForm('temperature')}
@@ -60,12 +66,6 @@ export default function ParentDashboard() {
             title="Luier"
             onClick={() => setActiveForm('diaper')}
             active={activeForm === 'diaper'}
-          />
-          <ActionButton
-            icon="🟡"
-            title="Geelzien"
-            onClick={() => setActiveForm('jaundice')}
-            active={activeForm === 'jaundice'}
           />
           <ActionButton
             icon="📝"
@@ -83,14 +83,14 @@ export default function ParentDashboard() {
           {activeForm === 'feeding' && (
             <FeedingForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
           )}
+          {activeForm === 'pumping' && (
+            <PumpingForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
+          )}
           {activeForm === 'temperature' && (
             <TemperatureForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
           )}
           {activeForm === 'diaper' && (
             <DiaperForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
-          )}
-          {activeForm === 'jaundice' && (
-            <JaundiceForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
           )}
           {activeForm === 'note' && (
             <NoteForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
@@ -155,17 +155,91 @@ interface FormProps {
 }
 
 function SleepForm({ onSubmit, onCancel }: FormProps) {
-  const [duration, setDuration] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [duration, setDuration] = useState(60);
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(getCurrentDate);
-  const [time, setTime] = useState(getCurrentTime);
+  const [showDateControls, setShowDateControls] = useState(false);
+
+  // Calculate duration when start/end times change
+  const calculateDurationFromTimes = (start: string, end: string) => {
+    if (!start || !end) return;
+    
+    const startDate = new Date(`2000-01-01T${start}:00`);
+    const endDate = new Date(`2000-01-01T${end}:00`);
+    
+    // Handle overnight sleep (end time is next day)
+    if (endDate <= startDate) {
+      endDate.setDate(endDate.getDate() + 1);
+    }
+    
+    const diffMs = endDate.getTime() - startDate.getTime();
+    const diffMinutes = Math.round(diffMs / (1000 * 60));
+    setDuration(diffMinutes);
+  };
+
+  // Calculate end time when start time and duration change
+  const calculateEndTimeFromDuration = (start: string, durationMinutes: number) => {
+    if (!start) return;
+    
+    const startDate = new Date(`2000-01-01T${start}:00`);
+    const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
+    
+    const hours = endDate.getHours().toString().padStart(2, '0');
+    const minutes = endDate.getMinutes().toString().padStart(2, '0');
+    setEndTime(`${hours}:${minutes}`);
+  };
+
+  // Calculate start time when end time and duration change  
+  const calculateStartTimeFromDuration = (end: string, durationMinutes: number) => {
+    if (!end) return;
+    
+    const endDate = new Date(`2000-01-01T${end}:00`);
+    const startDate = new Date(endDate.getTime() - durationMinutes * 60 * 1000);
+    
+    const hours = startDate.getHours().toString().padStart(2, '0');
+    const minutes = startDate.getMinutes().toString().padStart(2, '0');
+    setStartTime(`${hours}:${minutes}`);
+  };
+
+  const handleStartTimeChange = (newStartTime: string) => {
+    setStartTime(newStartTime);
+    if (endTime) {
+      calculateDurationFromTimes(newStartTime, endTime);
+    } else {
+      calculateEndTimeFromDuration(newStartTime, duration);
+    }
+  };
+
+  const handleEndTimeChange = (newEndTime: string) => {
+    setEndTime(newEndTime);
+    if (startTime) {
+      calculateDurationFromTimes(startTime, newEndTime);
+    } else {
+      calculateStartTimeFromDuration(newEndTime, duration);
+    }
+  };
+
+  const handleDurationChange = (newDuration: number) => {
+    setDuration(newDuration);
+    if (startTime) {
+      calculateEndTimeFromDuration(startTime, newDuration);
+    } else if (endTime) {
+      calculateStartTimeFromDuration(endTime, newDuration);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Use end time as the timestamp (when baby woke up)
+    const timestamp = endTime ? createTimestamp(date, endTime) : new Date().toISOString();
+    
     onSubmit({
-      timestamp: createTimestamp(date, time),
+      timestamp,
       type: 'sleep',
-      duration: parseInt(duration) || 0,
+      duration,
       notes: notes.trim() || undefined,
     });
   };
@@ -173,44 +247,82 @@ function SleepForm({ onSubmit, onCancel }: FormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <h3 className="text-lg font-medium">Slaap registreren</h3>
+      
+      {/* Sleep Duration Slider */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Duur (minuten)
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Slaapduur: {Math.floor(duration / 60)}u {duration % 60}m
         </label>
         <input
-          type="number"
+          type="range"
+          min="10"
+          max="480"
+          step="10"
           value={duration}
-          onChange={(e) => setDuration(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-          min="1"
-          required
+          onChange={(e) => handleDurationChange(parseInt(e.target.value))}
+          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
         />
+        <div className="flex justify-between text-xs text-gray-500 mt-1">
+          <span>10min</span>
+          <span>8u</span>
+        </div>
       </div>
+
+      {/* Time Selection */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Datum
+            Begintijd (wanneer ging baby slapen)
           </label>
           <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
+            type="time"
+            value={startTime}
+            onChange={(e) => handleStartTimeChange(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-            required
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Tijd
+            Eindtijd (wanneer werd baby wakker)
           </label>
           <input
             type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
+            value={endTime}
+            onChange={(e) => handleEndTimeChange(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-            required
           />
         </div>
+      </div>
+
+      <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
+        💡 <strong>Tip:</strong> Vul de begintijd, eindtijd of slaapduur in - de andere velden worden automatisch berekend!
+      </div>
+
+      {/* Collapsible Date Section */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowDateControls(!showDateControls)}
+          className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 focus:outline-none"
+        >
+          <span className="mr-1">{showDateControls ? '▼' : '▶'}</span>
+          Datum aanpassen?
+        </button>
+        
+        {showDateControls && (
+          <div className="mt-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Datum
+            </label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+              required
+            />
+          </div>
+        )}
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -243,17 +355,20 @@ function SleepForm({ onSubmit, onCancel }: FormProps) {
 }
 
 function FeedingForm({ onSubmit, onCancel }: FormProps) {
+  const [feedingType, setFeedingType] = useState<'bottle' | 'breast_left' | 'breast_right' | 'breast_both'>('bottle');
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(getCurrentDate);
   const [time, setTime] = useState(getCurrentTime);
+  const [showDateControls, setShowDateControls] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
       timestamp: createTimestamp(date, time),
       type: 'feeding',
-      amount: parseInt(amount) || 0,
+      feedingType,
+      amount: feedingType === 'bottle' ? parseInt(amount) || 0 : undefined, // Only track amount for bottle
       notes: notes.trim() || undefined,
     });
   };
@@ -261,44 +376,123 @@ function FeedingForm({ onSubmit, onCancel }: FormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <h3 className="text-lg font-medium">Voeding registreren</h3>
+      
+      {/* Feeding Type Selection */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Hoeveelheid (ml)
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          Type voeding
         </label>
-        <input
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-          min="1"
-          required
-        />
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setFeedingType('bottle')}
+            className={`p-4 rounded-lg border-2 text-center transition-colors ${
+              feedingType === 'bottle'
+                ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                : 'border-gray-300 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="text-2xl mb-1">🍼</div>
+            <div className="font-medium">Fles</div>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => setFeedingType('breast_left')}
+            className={`p-4 rounded-lg border-2 text-center transition-colors ${
+              feedingType === 'breast_left'
+                ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                : 'border-gray-300 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="text-2xl mb-1">🤱</div>
+            <div className="font-medium">Linker borst</div>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => setFeedingType('breast_right')}
+            className={`p-4 rounded-lg border-2 text-center transition-colors ${
+              feedingType === 'breast_right'
+                ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                : 'border-gray-300 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="text-2xl mb-1">🤱</div>
+            <div className="font-medium">Rechter borst</div>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => setFeedingType('breast_both')}
+            className={`p-4 rounded-lg border-2 text-center transition-colors ${
+              feedingType === 'breast_both'
+                ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                : 'border-gray-300 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="text-2xl mb-1">🤱</div>
+            <div className="font-medium">Beide borsten</div>
+          </button>
+        </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      {/* Amount for bottle feeding only */}
+      {feedingType === 'bottle' && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Datum
+            Hoeveelheid (ml)
           </label>
           <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+            min="1"
             required
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Tijd
-          </label>
-          <input
-            type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-            required
-          />
-        </div>
+      )}
+
+      {/* Collapsible Date/Time Section */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowDateControls(!showDateControls)}
+          className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 focus:outline-none"
+        >
+          <span className="mr-1">{showDateControls ? '▼' : '▶'}</span>
+          Datum aanpassen?
+        </button>
+        
+        {showDateControls && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Datum
+              </label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tijd
+              </label>
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+                required
+              />
+            </div>
+          </div>
+        )}
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -330,11 +524,166 @@ function FeedingForm({ onSubmit, onCancel }: FormProps) {
   );
 }
 
-function TemperatureForm({ onSubmit, onCancel }: FormProps) {
-  const [temperature, setTemperature] = useState('');
+function PumpingForm({ onSubmit, onCancel }: FormProps) {
+  const [breastSide, setBreastSide] = useState<'left' | 'right' | 'both'>('left');
+  const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(getCurrentDate);
   const [time, setTime] = useState(getCurrentTime);
+  const [showDateControls, setShowDateControls] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      timestamp: createTimestamp(date, time),
+      type: 'pumping',
+      breastSide,
+      amount: parseInt(amount) || 0,
+      notes: notes.trim() || undefined,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h3 className="text-lg font-medium">Kolven registreren</h3>
+      
+      {/* Breast Side Selection */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          Welke borst?
+        </label>
+        <div className="grid grid-cols-3 gap-3">
+          <button
+            type="button"
+            onClick={() => setBreastSide('left')}
+            className={`p-3 rounded-lg border-2 text-center transition-colors ${
+              breastSide === 'left'
+                ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                : 'border-gray-300 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="font-medium">Links</div>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => setBreastSide('right')}
+            className={`p-3 rounded-lg border-2 text-center transition-colors ${
+              breastSide === 'right'
+                ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                : 'border-gray-300 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="font-medium">Rechts</div>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => setBreastSide('both')}
+            className={`p-3 rounded-lg border-2 text-center transition-colors ${
+              breastSide === 'both'
+                ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                : 'border-gray-300 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="font-medium">Beide</div>
+          </button>
+        </div>
+      </div>
+
+      {/* Amount */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Hoeveelheid (ml)
+        </label>
+        <input
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+          min="1"
+          required
+        />
+      </div>
+
+      {/* Collapsible Date/Time Section */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowDateControls(!showDateControls)}
+          className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 focus:outline-none"
+        >
+          <span className="mr-1">{showDateControls ? '▼' : '▶'}</span>
+          Datum aanpassen?
+        </button>
+        
+        {showDateControls && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Datum
+              </label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tijd
+              </label>
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+                required
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Notities (optioneel)
+        </label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+          rows={3}
+        />
+      </div>
+      
+      <div className="flex space-x-3">
+        <button
+          type="submit"
+          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          Opslaan
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+        >
+          Annuleren
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function TemperatureForm({ onSubmit, onCancel }: FormProps) {
+  const [temperature, setTemperature] = useState(37.0);
+  const [notes, setNotes] = useState('');
+  const [date, setDate] = useState(getCurrentDate);
+  const [time, setTime] = useState(getCurrentTime);
+  const [showDateControls, setShowDateControls] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertData, setAlertData] = useState<{
     type: 'high' | 'low';
@@ -375,22 +724,41 @@ function TemperatureForm({ onSubmit, onCancel }: FormProps) {
     }
   };
 
-  const handleTemperatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setTemperature(value);
-    
-    // Check for alerts when user enters temperature
-    if (value && !isNaN(parseFloat(value))) {
-      checkTemperatureAlert(parseFloat(value));
+  const getTemperatureBackgroundColor = () => {
+    if (temperature >= 37.6) {
+      return 'bg-red-50 border-red-300'; // Too warm
+    } else if (temperature < 36.0) {
+      return 'bg-blue-50 border-blue-300'; // Too cold
     }
+    return 'bg-white border-gray-300'; // Normal
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check for temperature alerts on form submission (not while typing)
+    checkTemperatureAlert(temperature);
+    
+    // If there's an alert, show it before submitting
+    if (temperature >= 37.6 || temperature < 36.0) {
+      return; // Don't submit yet, let user acknowledge the alert first
+    }
+    
     onSubmit({
       timestamp: createTimestamp(date, time),
       type: 'temperature',
-      value: parseFloat(temperature),
+      value: temperature,
+      notes: notes.trim() || undefined,
+    });
+  };
+
+  const handleAlertAcknowledged = () => {
+    setShowAlert(false);
+    // After acknowledging, submit the form
+    onSubmit({
+      timestamp: createTimestamp(date, time),
+      type: 'temperature',
+      value: temperature,
       notes: notes.trim() || undefined,
     });
   };
@@ -399,47 +767,79 @@ function TemperatureForm({ onSubmit, onCancel }: FormProps) {
     <>
       <form onSubmit={handleSubmit} className="space-y-4">
         <h3 className="text-lg font-medium">Temperatuur meten</h3>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Temperatuur (°C)
-        </label>
-        <input
-          type="number"
-          step="0.1"
-          value={temperature}
-          onChange={handleTemperatureChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-          min="30"
-          max="42"
-          required
-        />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Datum
+        
+        {/* Temperature Slider */}
+        <div className={`p-4 rounded-md border-2 transition-colors ${getTemperatureBackgroundColor()}`}>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Temperatuur: {temperature.toFixed(1)}°C
           </label>
           <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-            required
+            type="range"
+            min="35.0"
+            max="41.0"
+            step="0.1"
+            value={temperature}
+            onChange={(e) => setTemperature(parseFloat(e.target.value))}
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
           />
+          <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <span>35°C</span>
+            <span>41°C</span>
+          </div>
+          {temperature >= 37.6 && (
+            <div className="mt-2 flex items-center text-red-600">
+              <span className="mr-1">🌡️🔥</span>
+              <span className="text-sm font-medium">Te warm</span>
+            </div>
+          )}
+          {temperature < 36.0 && (
+            <div className="mt-2 flex items-center text-blue-600">
+              <span className="mr-1">🌡️❄️</span>
+              <span className="text-sm font-medium">Te koud</span>
+            </div>
+          )}
         </div>
+
+        {/* Collapsible Date/Time Section */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Tijd
-          </label>
-          <input
-            type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-            required
-          />
+          <button
+            type="button"
+            onClick={() => setShowDateControls(!showDateControls)}
+            className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 focus:outline-none"
+          >
+            <span className="mr-1">{showDateControls ? '▼' : '▶'}</span>
+            Datum aanpassen?
+          </button>
+          
+          {showDateControls && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Datum
+                </label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tijd
+                </label>
+                <input
+                  type="time"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+                  required
+                />
+              </div>
+            </div>
+          )}
         </div>
-      </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Notities (optioneel)
@@ -491,12 +891,19 @@ function TemperatureForm({ onSubmit, onCancel }: FormProps) {
               ))}
             </ul>
           </div>
-          <div className="p-4 bg-gray-50 rounded-b-lg flex justify-end">
+          <div className="p-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
             <button
+              type="button"
               onClick={() => setShowAlert(false)}
+              className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            >
+              Annuleren
+            </button>
+            <button
+              onClick={handleAlertAcknowledged}
               className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              Begrepen
+              Begrepen, toch opslaan
             </button>
           </div>
         </div>
@@ -508,9 +915,11 @@ function TemperatureForm({ onSubmit, onCancel }: FormProps) {
 
 function DiaperForm({ onSubmit, onCancel }: FormProps) {
   const [diaperType, setDiaperType] = useState<'wet' | 'dirty' | 'both'>('wet');
+  const [diaperAmount, setDiaperAmount] = useState<'little' | 'medium' | 'much'>('medium');
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(getCurrentDate);
   const [time, setTime] = useState(getCurrentTime);
+  const [showDateControls, setShowDateControls] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -518,6 +927,7 @@ function DiaperForm({ onSubmit, onCancel }: FormProps) {
       timestamp: createTimestamp(date, time),
       type: 'diaper',
       diaperType,
+      diaperAmount,
       notes: notes.trim() || undefined,
     });
   };
@@ -525,96 +935,137 @@ function DiaperForm({ onSubmit, onCancel }: FormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <h3 className="text-lg font-medium">Luier verschonen</h3>
+      
+      {/* Diaper Type - Easy Click Options */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Type
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          Type luier
         </label>
-        <div className="space-y-2">
-          {[
-            { value: 'wet', label: 'Nat' },
-            { value: 'dirty', label: 'Vies' },
-            { value: 'both', label: 'Nat en vies' }
-          ].map((option) => (
-            <label key={option.value} className="flex items-center">
-              <input
-                type="radio"
-                name="diaperType"
-                value={option.value}
-                checked={diaperType === option.value}
-                onChange={(e) => setDiaperType(e.target.value as 'wet' | 'dirty' | 'both')}
-                className="mr-2"
-              />
-              {option.label}
-            </label>
-          ))}
+        <div className="grid grid-cols-3 gap-3">
+          <button
+            type="button"
+            onClick={() => setDiaperType('wet')}
+            className={`p-4 rounded-lg border-2 text-center transition-colors ${
+              diaperType === 'wet'
+                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                : 'border-gray-300 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="text-2xl mb-1">💧</div>
+            <div className="font-medium">Nat</div>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => setDiaperType('dirty')}
+            className={`p-4 rounded-lg border-2 text-center transition-colors ${
+              diaperType === 'dirty'
+                ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                : 'border-gray-300 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="text-2xl mb-1">💩</div>
+            <div className="font-medium">Vies</div>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => setDiaperType('both')}
+            className={`p-4 rounded-lg border-2 text-center transition-colors ${
+              diaperType === 'both'
+                ? 'border-orange-500 bg-orange-50 text-orange-700'
+                : 'border-gray-300 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="text-2xl mb-1">💧💩</div>
+            <div className="font-medium">Beide</div>
+          </button>
         </div>
       </div>
+
+      {/* Amount Selection */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Notities (optioneel)
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          Hoeveelheid
         </label>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-          rows={3}
-        />
+        <div className="grid grid-cols-3 gap-3">
+          <button
+            type="button"
+            onClick={() => setDiaperAmount('little')}
+            className={`p-3 rounded-lg border-2 text-center transition-colors ${
+              diaperAmount === 'little'
+                ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                : 'border-gray-300 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="font-medium">Weinig</div>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => setDiaperAmount('medium')}
+            className={`p-3 rounded-lg border-2 text-center transition-colors ${
+              diaperAmount === 'medium'
+                ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                : 'border-gray-300 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="font-medium">Middel</div>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => setDiaperAmount('much')}
+            className={`p-3 rounded-lg border-2 text-center transition-colors ${
+              diaperAmount === 'much'
+                ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                : 'border-gray-300 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="font-medium">Veel</div>
+          </button>
+        </div>
       </div>
-      <div className="flex space-x-3">
-        <button
-          type="submit"
-          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          Opslaan
-        </button>
+
+      {/* Collapsible Date/Time Section */}
+      <div>
         <button
           type="button"
-          onClick={onCancel}
-          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+          onClick={() => setShowDateControls(!showDateControls)}
+          className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 focus:outline-none"
         >
-          Annuleren
+          <span className="mr-1">{showDateControls ? '▼' : '▶'}</span>
+          Datum aanpassen?
         </button>
-      </div>
-    </form>
-  );
-}
-
-function JaundiceForm({ onSubmit, onCancel }: FormProps) {
-  const [jaundiceLevel, setJaundiceLevel] = useState<1 | 2 | 3 | 4 | 5>(1);
-  const [notes, setNotes] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit({
-      timestamp: new Date().toISOString(),
-      type: 'jaundice',
-      jaundiceLevel,
-      notes: notes.trim() || undefined,
-    });
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <h3 className="text-lg font-medium">Geelzien beoordelen</h3>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Niveau (1 = licht, 5 = ernstig)
-        </label>
-        <div className="flex space-x-4">
-          {[1, 2, 3, 4, 5].map((level) => (
-            <label key={level} className="flex items-center">
+        
+        {showDateControls && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Datum
+              </label>
               <input
-                type="radio"
-                name="jaundiceLevel"
-                value={level}
-                checked={jaundiceLevel === level}
-                onChange={(e) => setJaundiceLevel(parseInt(e.target.value) as 1 | 2 | 3 | 4 | 5)}
-                className="mr-1"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+                required
               />
-              {level}
-            </label>
-          ))}
-        </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tijd
+              </label>
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+                required
+              />
+            </div>
+          </div>
+        )}
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -647,6 +1098,7 @@ function JaundiceForm({ onSubmit, onCancel }: FormProps) {
 }
 
 function NoteForm({ onSubmit, onCancel }: FormProps) {
+  const [noteCategory, setNoteCategory] = useState<'general' | 'question' | 'todo'>('general');
   const [notes, setNotes] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -654,6 +1106,7 @@ function NoteForm({ onSubmit, onCancel }: FormProps) {
     onSubmit({
       timestamp: new Date().toISOString(),
       type: 'note',
+      noteCategory,
       notes: notes.trim(),
     });
   };
@@ -661,18 +1114,99 @@ function NoteForm({ onSubmit, onCancel }: FormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <h3 className="text-lg font-medium">Notitie toevoegen</h3>
+      
+      {/* Note Category Selection */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          Type notitie
+        </label>
+        <div className="grid grid-cols-1 gap-3">
+          <button
+            type="button"
+            onClick={() => setNoteCategory('general')}
+            className={`p-3 rounded-lg border-2 text-left transition-colors ${
+              noteCategory === 'general'
+                ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                : 'border-gray-300 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center">
+              <span className="text-xl mr-3">📝</span>
+              <div>
+                <div className="font-medium">Algemene notitie</div>
+                <div className="text-sm opacity-75">Voor jezelf bijhouden</div>
+              </div>
+            </div>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => setNoteCategory('question')}
+            className={`p-3 rounded-lg border-2 text-left transition-colors ${
+              noteCategory === 'question'
+                ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                : 'border-gray-300 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center">
+              <span className="text-xl mr-3">❓</span>
+              <div>
+                <div className="font-medium">Vraag aan kraamhulp</div>
+                <div className="text-sm opacity-75">Vraag over ontwikkeling of verzorging</div>
+              </div>
+            </div>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => setNoteCategory('todo')}
+            className={`p-3 rounded-lg border-2 text-left transition-colors ${
+              noteCategory === 'todo'
+                ? 'border-green-500 bg-green-50 text-green-700'
+                : 'border-gray-300 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center">
+              <span className="text-xl mr-3">✅</span>
+              <div>
+                <div className="font-medium">Verzoek aan kraamhulp</div>
+                <div className="text-sm opacity-75">Bijvoorbeeld: was draaien, boodschappen</div>
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Notitie
+          {noteCategory === 'general' && 'Notitie'}
+          {noteCategory === 'question' && 'Wat is je vraag?'}
+          {noteCategory === 'todo' && 'Wat zou je graag willen dat de kraamhulp doet?'}
         </label>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
           rows={4}
+          placeholder={
+            noteCategory === 'general' ? 'Typ hier je notitie...' :
+            noteCategory === 'question' ? 'Bijv: Hoe vaak moet ik baby verschonen?' :
+            'Bijv: Kun je vandaag de was doen?'
+          }
           required
         />
       </div>
+      
+      {(noteCategory === 'question' || noteCategory === 'todo') && (
+        <div className="bg-blue-50 p-3 rounded-md">
+          <div className="flex items-start">
+            <span className="text-blue-600 mr-2">ℹ️</span>
+            <div className="text-sm text-blue-800">
+              <strong>Let op:</strong> Deze {noteCategory === 'question' ? 'vraag' : 'taak'} wordt doorgestuurd naar de kraamhulp en verschijnt in haar takenoverzicht.
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex space-x-3">
         <button
           type="submit"
@@ -708,15 +1242,33 @@ function RecordItem({ record }: RecordItemProps) {
       case 'sleep':
         return { icon: '😴', text: `Slaap: ${record.duration} min`, time, date };
       case 'feeding':
-        return { icon: '🍼', text: `Voeding: ${record.amount} ml`, time, date };
+        if (record.feedingType === 'bottle') {
+          return { icon: '🍼', text: `Voeding: ${record.amount} ml (fles)`, time, date };
+        } else if (record.feedingType === 'breast_left') {
+          return { icon: '🤱', text: `Voeding: linker borst`, time, date };
+        } else if (record.feedingType === 'breast_right') {
+          return { icon: '🤱', text: `Voeding: rechter borst`, time, date };
+        } else if (record.feedingType === 'breast_both') {
+          return { icon: '🤱', text: `Voeding: beide borsten`, time, date };
+        }
+        return { icon: '🍼', text: `Voeding`, time, date };
+      case 'pumping':
+        const sideText = record.breastSide === 'both' ? 'beide borsten' : 
+                        record.breastSide === 'left' ? 'linker borst' : 'rechter borst';
+        return { icon: '🥛', text: `Kolven: ${record.amount} ml (${sideText})`, time, date };
       case 'temperature':
         return { icon: '🌡️', text: `Temperatuur: ${record.value}°C`, time, date };
       case 'diaper':
-        return { icon: '👶', text: `Luier: ${record.diaperType}`, time, date };
+        const amountText = record.diaperAmount ? ` (${record.diaperAmount})` : '';
+        return { icon: '👶', text: `Luier: ${record.diaperType}${amountText}`, time, date };
       case 'jaundice':
         return { icon: '🟡', text: `Geelzien: niveau ${record.jaundiceLevel}`, time, date };
       case 'note':
-        return { icon: '📝', text: 'Notitie', time, date };
+        const categoryIcon = record.noteCategory === 'question' ? '❓' : 
+                           record.noteCategory === 'todo' ? '✅' : '📝';
+        const categoryText = record.noteCategory === 'question' ? 'Vraag' :
+                           record.noteCategory === 'todo' ? 'Verzoek' : 'Notitie';
+        return { icon: categoryIcon, text: categoryText, time, date };
       default:
         return { icon: '📋', text: record.type, time, date };
     }
