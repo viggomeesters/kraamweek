@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { BabyRecord, AppData, BabyProfile } from '@/types';
 import { DataService } from '@/lib/dataService';
 import { AnalyticsSection } from './Analytics';
+
+import { formatTime24, formatDateDDMMYYYY, formatDateLong } from '@/lib/dateUtils';
 import FloatingActionButton from './FloatingActionButton';
 import BottomNavigation from './BottomNavigation';
 import MobileOverview from './MobileOverview';
@@ -1065,12 +1067,8 @@ interface RecordItemProps {
 
 function RecordItem({ record }: RecordItemProps) {
   const getRecordDisplay = () => {
-    const time = new Date(record.timestamp).toLocaleTimeString('nl-NL', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-    const date = new Date(record.timestamp).toLocaleDateString('nl-NL');
+    const time = formatTime24(record.timestamp);
+    const date = formatDateDDMMYYYY(record.timestamp);
 
     switch (record.type) {
       case 'sleep':
@@ -1427,14 +1425,6 @@ interface BabyProfileDisplayProps {
 }
 
 function BabyProfileDisplay({ profile }: BabyProfileDisplayProps) {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('nl-NL', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
   const calculateAge = (birthDate: string) => {
     const birth = new Date(birthDate);
     const now = new Date();
@@ -1473,7 +1463,7 @@ function BabyProfileDisplay({ profile }: BabyProfileDisplayProps) {
         <div className="bg-gray-50 p-3 rounded-lg">
           <h6 className="font-medium text-gray-900 text-sm">Geboren</h6>
           <p className="text-gray-700">
-            {formatDate(profile.geboortedatum)}
+            {formatDateLong(profile.geboortedatum)}
             {profile.geboortijd && ` om ${profile.geboortijd}`}
           </p>
         </div>
