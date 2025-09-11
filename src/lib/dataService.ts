@@ -336,4 +336,162 @@ export class DataService {
       return false;
     }
   }
+
+  // Analytics methods
+  static getAnalyticsData(startDate: string, endDate: string) {
+    const data = this.loadData();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Filter records within date range
+    const babyRecordsInRange = data.babyRecords.filter(record => {
+      const recordDate = new Date(record.timestamp);
+      return recordDate >= start && recordDate <= end;
+    });
+    
+    const motherRecordsInRange = data.motherRecords.filter(record => {
+      const recordDate = new Date(record.timestamp);
+      return recordDate >= start && recordDate <= end;
+    });
+    
+    return {
+      babyRecords: babyRecordsInRange,
+      motherRecords: motherRecordsInRange
+    };
+  }
+
+  static getDailyFeedingCount(startDate: string, endDate: string): Array<{date: string, count: number}> {
+    const { babyRecords } = this.getAnalyticsData(startDate, endDate);
+    const feedingRecords = babyRecords.filter(record => record.type === 'feeding');
+    
+    const dailyCounts: Record<string, number> = {};
+    
+    feedingRecords.forEach(record => {
+      const date = record.timestamp.split('T')[0]; // Get date part only
+      dailyCounts[date] = (dailyCounts[date] || 0) + 1;
+    });
+    
+    // Fill in missing dates with 0 counts
+    const result: Array<{date: string, count: number}> = [];
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0];
+      result.push({
+        date: dateStr,
+        count: dailyCounts[dateStr] || 0
+      });
+    }
+    
+    return result.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  static getDailyWeights(startDate: string, endDate: string): Array<{date: string, weight: number}> {
+    const { babyRecords } = this.getAnalyticsData(startDate, endDate);
+    const weightRecords = babyRecords.filter(record => record.type === 'weight' && record.weight);
+    
+    const dailyWeights: Record<string, number[]> = {};
+    
+    weightRecords.forEach(record => {
+      if (record.weight) {
+        const date = record.timestamp.split('T')[0];
+        if (!dailyWeights[date]) {
+          dailyWeights[date] = [];
+        }
+        dailyWeights[date].push(record.weight);
+      }
+    });
+    
+    // Average weights per day
+    const result: Array<{date: string, weight: number}> = [];
+    Object.keys(dailyWeights).forEach(date => {
+      const weights = dailyWeights[date];
+      const avgWeight = weights.reduce((sum, w) => sum + w, 0) / weights.length;
+      result.push({ date, weight: avgWeight });
+    });
+    
+    return result.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  static getDailyTemperatures(startDate: string, endDate: string, type: 'baby' | 'mother'): Array<{date: string, temperature: number}> {
+    const { babyRecords, motherRecords } = this.getAnalyticsData(startDate, endDate);
+    const records = type === 'baby' ? babyRecords : motherRecords;
+    const tempRecords = records.filter(record => record.type === 'temperature' && record.value);
+    
+    const dailyTemps: Record<string, number[]> = {};
+    
+    tempRecords.forEach(record => {
+      if (record.value) {
+        // Convert value to number if it's a string
+        const temp = typeof record.value === 'string' ? parseFloat(record.value) : record.value;
+        if (!isNaN(temp)) {
+          const date = record.timestamp.split('T')[0];
+          if (!dailyTemps[date]) {
+            dailyTemps[date] = [];
+          }
+          dailyTemps[date].push(temp);
+        }
+      }
+    });
+    
+    // Average temperatures per day
+    const result: Array<{date: string, temperature: number}> = [];
+    Object.keys(dailyTemps).forEach(date => {
+      const temps = dailyTemps[date];
+      const avgTemp = temps.reduce((sum, t) => sum + t, 0) / temps.length;
+      result.push({ date, temperature: avgTemp });
+    });
+    
+    return result.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  static getDailyPainLevels(startDate: string, endDate: string): Array<{date: string, painLevel: number}> {
+    const { motherRecords } = this.getAnalyticsData(startDate, endDate);
+    const painRecords = motherRecords.filter(record => record.type === 'pain' && record.painLevel);
+    
+    const dailyPain: Record<string, number[]> = {};
+    
+    painRecords.forEach(record => {
+      if (record.painLevel) {
+        const date = record.timestamp.split('T')[0];
+        if (!dailyPain[date]) {
+          dailyPain[date] = [];
+        }
+        dailyPain[date].push(record.painLevel);
+      }
+    });
+    
+    // Average pain levels per day
+    const result: Array<{date: string, painLevel: number}> = [];
+    Object.keys(dailyPain).forEach(date => {
+      const levels = dailyPain[date];
+      const avgPain = levels.reduce((sum, p) => sum + p, 0) / levels.length;
+      result.push({ date, painLevel: avgPain });
+    });
+    
+    return result.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  static getDailySleepDuration(startDate: string, endDate: string): Array<{date: string, duration: number}> {
+    const { babyRecords } = this.getAnalyticsData(startDate, endDate);
+    const sleepRecords = babyRecords.filter(record => record.type === 'sleep' && record.duration);
+    
+    const dailySleep: Record<string, number> = {};
+    
+    sleepRecords.forEach(record => {
+      if (record.duration) {
+        const date = record.timestamp.split('T')[0];
+        dailySleep[date] = (dailySleep[date] || 0) + record.duration;
+      }
+    });
+    
+    // Convert to array
+    const result: Array<{date: string, duration: number}> = [];
+    Object.keys(dailySleep).forEach(date => {
+      result.push({ date, duration: dailySleep[date] });
+    });
+    
+    return result.sort((a, b) => a.date.localeCompare(b.date));
+  }
 }
