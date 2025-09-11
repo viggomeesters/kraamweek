@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { AppData, Alert, BabyRecord, MotherRecord, FamilyObservation, Task } from '@/types';
+import { AppData, Alert, BabyRecord, MotherRecord, FamilyObservation, Task, BabyProfile } from '@/types';
 import { DataService } from '@/lib/dataService';
 
 export default function NurseDashboard() {
   const [data, setData] = useState<AppData>(DataService.loadData());
-  const [activeTab, setActiveTab] = useState<'overview' | 'mother' | 'observations' | 'tasks'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'mother' | 'observations' | 'tasks' | 'profile'>('overview');
 
   const refreshData = () => {
     setData(DataService.loadData());
@@ -14,6 +14,12 @@ export default function NurseDashboard() {
 
   // Get unacknowledged alerts
   const unacknowledgedAlerts = data.alerts.filter(alert => !alert.acknowledged);
+  
+  // Get recent acknowledged alerts (last 5)
+  const acknowledgedAlerts = data.alerts
+    .filter(alert => alert.acknowledged)
+    .sort((a, b) => new Date(b.acknowledgedAt || '').getTime() - new Date(a.acknowledgedAt || '').getTime())
+    .slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -28,11 +34,25 @@ export default function NurseDashboard() {
               <AlertItem 
                 key={alert.id} 
                 alert={alert} 
-                onAcknowledge={() => {
-                  DataService.acknowledgeAlert(alert.id, 'Kraamhulp');
+                onAcknowledge={(comment) => {
+                  DataService.acknowledgeAlert(alert.id, 'Kraamhulp', comment);
                   refreshData();
                 }} 
               />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Resolved Alerts Section */}
+      {acknowledgedAlerts.length > 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-green-800 mb-3 flex items-center">
+            ✅ Recent afgehandelde waarschuwingen ({acknowledgedAlerts.length})
+          </h3>
+          <div className="space-y-2">
+            {acknowledgedAlerts.map((alert) => (
+              <ResolvedAlertItem key={alert.id} alert={alert} />
             ))}
           </div>
         </div>
@@ -46,10 +66,11 @@ export default function NurseDashboard() {
             { id: 'mother', label: 'Moeder', icon: '👩' },
             { id: 'observations', label: 'Observaties', icon: '📋' },
             { id: 'tasks', label: 'Taken', icon: '✅' },
+            { id: 'profile', label: 'Baby Profiel', icon: '📄' },
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as 'overview' | 'mother' | 'observations' | 'tasks')}
+              onClick={() => setActiveTab(tab.id as 'overview' | 'mother' | 'observations' | 'tasks' | 'profile')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
                   ? 'border-indigo-500 text-indigo-600'
@@ -75,16 +96,22 @@ export default function NurseDashboard() {
       {activeTab === 'tasks' && (
         <TasksSection tasks={data.tasks} onRefresh={refreshData} />
       )}
+      {activeTab === 'profile' && (
+        <BabyProfileSection onRefresh={refreshData} />
+      )}
     </div>
   );
 }
 
 interface AlertItemProps {
   alert: Alert;
-  onAcknowledge: () => void;
+  onAcknowledge: (comment?: string) => void;
 }
 
 function AlertItem({ alert, onAcknowledge }: AlertItemProps) {
+  const [showCommentDialog, setShowCommentDialog] = useState(false);
+  const [comment, setComment] = useState('');
+
   const getAlertIcon = () => {
     switch (alert.type) {
       case 'critical': return '🚨';
@@ -103,6 +130,58 @@ function AlertItem({ alert, onAcknowledge }: AlertItemProps) {
     }
   };
 
+  const handleAcknowledge = () => {
+    onAcknowledge(comment.trim() || undefined);
+    setShowCommentDialog(false);
+    setComment('');
+  };
+
+  if (showCommentDialog) {
+    return (
+      <div className={`p-4 rounded-md ${getAlertColor()}`}>
+        <div className="mb-3">
+          <div className="flex items-center space-x-2 mb-2">
+            <span className="text-lg">{getAlertIcon()}</span>
+            <span className="font-medium">{alert.message}</span>
+          </div>
+          <div className="text-sm opacity-75">
+            {new Date(alert.timestamp).toLocaleString('nl-NL')}
+          </div>
+        </div>
+        
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Opmerking bij afhandeling (optioneel):
+            </label>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 bg-white"
+              rows={2}
+              placeholder="Bijv: Huisarts gebeld, temperatuur wordt gemonitord..."
+            />
+          </div>
+          
+          <div className="flex space-x-2">
+            <button
+              onClick={handleAcknowledge}
+              className="px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
+            >
+              Afhandelen
+            </button>
+            <button
+              onClick={() => setShowCommentDialog(false)}
+              className="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm"
+            >
+              Annuleren
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`p-3 rounded-md ${getAlertColor()} flex items-center justify-between`}>
       <div className="flex items-center space-x-2">
@@ -113,11 +192,50 @@ function AlertItem({ alert, onAcknowledge }: AlertItemProps) {
         </span>
       </div>
       <button
-        onClick={onAcknowledge}
+        onClick={() => setShowCommentDialog(true)}
         className="text-xs px-3 py-1 bg-white bg-opacity-50 rounded hover:bg-opacity-75 transition-colors"
       >
         Afhandelen
       </button>
+    </div>
+  );
+}
+
+interface ResolvedAlertItemProps {
+  alert: Alert;
+}
+
+function ResolvedAlertItem({ alert }: ResolvedAlertItemProps) {
+  const getAlertIcon = () => {
+    switch (alert.type) {
+      case 'critical': return '🚨';
+      case 'warning': return '⚠️';
+      case 'info': return 'ℹ️';
+      default: return '🔔';
+    }
+  };
+
+  return (
+    <div className="p-3 rounded-md bg-green-100 text-green-800">
+      <div className="flex items-start justify-between">
+        <div className="flex items-start space-x-2 flex-1">
+          <span className="text-lg mt-1">{getAlertIcon()}</span>
+          <div className="flex-1">
+            <div className="font-medium">{alert.message}</div>
+            <div className="text-xs opacity-75 mt-1">
+              Afgehandeld op {new Date(alert.acknowledgedAt || '').toLocaleString('nl-NL')} door {alert.acknowledgedBy}
+            </div>
+            {alert.resolutionComment && (
+              <div className="mt-2 p-2 bg-green-200 rounded text-sm">
+                <strong>Opmerking:</strong> {alert.resolutionComment}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="text-xs opacity-75 ml-2">
+          ✅ Afgehandeld
+        </div>
+      </div>
     </div>
   );
 }
@@ -131,8 +249,8 @@ function BabyOverview({ records }: BabyOverviewProps) {
   const [showJaundiceForm, setShowJaundiceForm] = useState(false);
   
   const recentRecords = records
-    .slice(-20)
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    .sort((a, b) => parseInt(b.id) - parseInt(a.id)) // Sort by ID (entry order)
+    .slice(0, 20); // Take first 20 (most recently entered)
 
   const refreshData = () => {
     // This should trigger a refresh of the data - we'll need to pass this from parent
@@ -233,10 +351,27 @@ function BabyOverview({ records }: BabyOverviewProps) {
         
         <div className="bg-white rounded-lg shadow-md p-4">
           <div className="text-2xl mb-2">🌡️</div>
-          <div className="text-2xl font-bold text-gray-900">
+          <div className={`text-2xl font-bold ${
+            stats.lastTemperature ? 
+              (stats.lastTemperature.value as number) >= 38.0 ? 'text-red-600' :
+              (stats.lastTemperature.value as number) >= 37.6 ? 'text-orange-600' :
+              (stats.lastTemperature.value as number) <= 35.5 ? 'text-blue-600' : 
+              'text-gray-900'
+            : 'text-gray-900'
+          }`}>
             {stats.lastTemperature ? `${stats.lastTemperature.value}°C` : '-'}
+            {stats.lastTemperature && (stats.lastTemperature.value as number) >= 38.5 && <span className="text-red-500 ml-1">🔥</span>}
+            {stats.lastTemperature && (stats.lastTemperature.value as number) <= 35.0 && <span className="text-blue-500 ml-1">❄️</span>}
           </div>
-          <div className="text-sm text-gray-600">Laatste temperatuur</div>
+          <div className="text-sm text-gray-600">
+            Laatste temperatuur
+            {stats.lastTemperature && (stats.lastTemperature.value as number) >= 38.5 && 
+              <div className="text-red-600 font-medium mt-1">⚠️ Extreem hoog</div>}
+            {stats.lastTemperature && (stats.lastTemperature.value as number) <= 35.0 && 
+              <div className="text-blue-600 font-medium mt-1">⚠️ Extreem laag</div>}
+            {stats.lastTemperature && (stats.lastTemperature.value as number) >= 37.6 && (stats.lastTemperature.value as number) < 38.5 && 
+              <div className="text-orange-600 font-medium mt-1">Verhoogd</div>}
+          </div>
         </div>
         
         <div className="bg-white rounded-lg shadow-md p-4">
@@ -301,7 +436,20 @@ function BabyOverview({ records }: BabyOverviewProps) {
                             record.breastSide === 'left' ? 'linker borst' : 'rechter borst'
                           })`
                         )}
-                        {record.type === 'temperature' && `Temperatuur: ${record.value}°C`}
+                        {record.type === 'temperature' && (
+                          <>
+                            <span className={
+                              (record.value as number) >= 38.0 ? 'text-red-600 font-bold' :
+                              (record.value as number) >= 37.6 ? 'text-orange-600 font-bold' :
+                              (record.value as number) <= 35.5 ? 'text-blue-600 font-bold' : 
+                              ''
+                            }>
+                              Temperatuur: {record.value}°C
+                            </span>
+                            {(record.value as number) >= 38.5 && <span className="text-red-500 ml-1">🔥</span>}
+                            {(record.value as number) <= 35.0 && <span className="text-blue-500 ml-1">❄️</span>}
+                          </>
+                        )}
                         {record.type === 'weight' && `Gewicht: ${record.weight}g`}
                         {record.type === 'diaper' && (
                           `Luier: ${record.diaperType}${record.diaperAmount ? ` (${record.diaperAmount})` : ''}`
@@ -346,8 +494,8 @@ function MotherSection({ records, onRefresh }: MotherSectionProps) {
   };
 
   const recentRecords = records
-    .slice(-10)
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    .sort((a, b) => parseInt(b.id) - parseInt(a.id)) // Sort by ID (entry order)
+    .slice(0, 10); // Take first 10 (most recently entered)
 
   return (
     <div className="space-y-6">
@@ -1262,5 +1410,23 @@ function JaundiceAssessmentForm({ onSubmit, onCancel }: JaundiceAssessmentFormPr
         </button>
       </div>
     </form>
+  );
+}
+
+// Baby Profile Components added for requirement #8
+// ... (components will be added via editor)
+
+function BabyProfileSection({ onRefresh }: { onRefresh: () => void }) {
+  return (
+    <div className="space-y-6">
+      <h3 className="text-xl font-semibold text-gray-900">Baby Profiel</h3>
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="text-center py-8">
+          <div className="text-6xl mb-4">👶</div>
+          <h4 className="text-lg font-medium text-gray-900 mb-2">Baby Profiel - Coming Soon</h4>
+          <p className="text-gray-600">Deze functionaliteit wordt binnenkort toegevoegd.</p>
+        </div>
+      </div>
+    </div>
   );
 }

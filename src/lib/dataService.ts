@@ -1,4 +1,4 @@
-import { AppData, BabyRecord, MotherRecord, FamilyObservation, Task, Alert, User } from '@/types';
+import { AppData, BabyRecord, MotherRecord, FamilyObservation, Task, Alert, User, BabyProfile } from '@/types';
 
 const STORAGE_KEY = 'kraamweek-data';
 const USER_KEY = 'kraamweek-user';
@@ -10,6 +10,7 @@ const getInitialData = (): AppData => ({
   familyObservations: [],
   tasks: [],
   alerts: [],
+  babyProfile: undefined, // No profile by default
 });
 
 export class DataService {
@@ -78,6 +79,7 @@ export class DataService {
     data.babyRecords.push(newRecord);
     this.saveData(data);
     this.checkForAlerts(newRecord, data);
+    this.createTasksFromNote(newRecord);
     
     return newRecord;
   }
@@ -156,7 +158,7 @@ export class DataService {
     return newAlert;
   }
 
-  static acknowledgeAlert(id: string, acknowledgedBy: string): Alert | null {
+  static acknowledgeAlert(id: string, acknowledgedBy: string, resolutionComment?: string): Alert | null {
     const data = this.loadData();
     const alertIndex = data.alerts.findIndex(a => a.id === id);
     
@@ -167,6 +169,7 @@ export class DataService {
       acknowledged: true,
       acknowledgedBy,
       acknowledgedAt: new Date().toISOString(),
+      resolutionComment: resolutionComment?.trim() || undefined,
     };
     
     this.saveData(data);
@@ -260,6 +263,56 @@ export class DataService {
         relatedRecordId: record.id,
       });
     }
+  }
+
+  // Create tasks automatically from parent questions and todos
+  private static createTasksFromNote(record: BabyRecord): void {
+    if (record.type === 'note' && (record.noteCategory === 'question' || record.noteCategory === 'todo')) {
+      const taskTitle = record.noteCategory === 'question' 
+        ? `Vraag beantwoorden: ${record.notes?.substring(0, 50)}${(record.notes?.length || 0) > 50 ? '...' : ''}`
+        : `Verzoek uitvoeren: ${record.notes?.substring(0, 50)}${(record.notes?.length || 0) > 50 ? '...' : ''}`;
+      
+      const taskDescription = record.notes || '';
+      
+      this.addTask({
+        title: taskTitle,
+        description: taskDescription,
+        category: record.noteCategory === 'question' ? 'other' : 'household',
+        priority: record.noteCategory === 'question' ? 'medium' : 'low',
+        status: 'pending',
+        assignedTo: 'kraamhulp',
+        createdBy: 'parents',
+      });
+    }
+  }
+
+  // Baby Profile management
+  static getBabyProfile(): BabyProfile | null {
+    const data = this.loadData();
+    return data.babyProfile || null;
+  }
+
+  static saveBabyProfile(profile: Omit<BabyProfile, 'id' | 'createdAt' | 'updatedAt'>): BabyProfile {
+    const data = this.loadData();
+    const now = new Date().toISOString();
+    
+    const newProfile: BabyProfile = {
+      ...profile,
+      id: data.babyProfile?.id || Date.now().toString(),
+      createdAt: data.babyProfile?.createdAt || now,
+      updatedAt: now,
+    };
+    
+    data.babyProfile = newProfile;
+    this.saveData(data);
+    
+    return newProfile;
+  }
+
+  static deleteBabyProfile(): void {
+    const data = this.loadData();
+    data.babyProfile = undefined;
+    this.saveData(data);
   }
 
   // Utility methods

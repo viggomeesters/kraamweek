@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BabyRecord, AppData } from '@/types';
 import { DataService } from '@/lib/dataService';
 
@@ -23,10 +23,10 @@ export default function ParentDashboard() {
     setActiveForm(null);
   };
 
-  // Get recent records for display
+  // Get recent records for display - sort by entry order (most recently entered first)
   const recentRecords = data.babyRecords
-    .slice(-10)
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    .sort((a, b) => parseInt(b.id) - parseInt(a.id)) // Sort by ID (entry order) 
+    .slice(0, 10); // Take first 10 (most recently entered)
 
   return (
     <div className="space-y-8">
@@ -156,11 +156,19 @@ interface FormProps {
 
 function SleepForm({ onSubmit, onCancel }: FormProps) {
   const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [endTime, setEndTime] = useState(getCurrentTime); // Default to current time
   const [duration, setDuration] = useState(60);
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(getCurrentDate);
   const [showDateControls, setShowDateControls] = useState(false);
+
+  // Auto-calculate start time when component mounts (end time defaults to now, duration is 60 min)
+  useEffect(() => {
+    if (endTime && duration && !startTime) {
+      calculateStartTimeFromDuration(endTime, duration);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only on mount
 
   // Calculate duration when start/end times change
   const calculateDurationFromTimes = (start: string, end: string) => {
@@ -306,7 +314,7 @@ function SleepForm({ onSubmit, onCancel }: FormProps) {
           className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 focus:outline-none"
         >
           <span className="mr-1">{showDateControls ? '▼' : '▶'}</span>
-          Datum aanpassen?
+          Tijdstip aanpassen?
         </button>
         
         {showDateControls && (
@@ -462,7 +470,7 @@ function FeedingForm({ onSubmit, onCancel }: FormProps) {
           className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 focus:outline-none"
         >
           <span className="mr-1">{showDateControls ? '▼' : '▶'}</span>
-          Datum aanpassen?
+          Tijdstip aanpassen?
         </button>
         
         {showDateControls && (
@@ -614,7 +622,7 @@ function PumpingForm({ onSubmit, onCancel }: FormProps) {
           className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 focus:outline-none"
         >
           <span className="mr-1">{showDateControls ? '▼' : '▶'}</span>
-          Datum aanpassen?
+          Tijdstip aanpassen?
         </button>
         
         {showDateControls && (
@@ -808,7 +816,7 @@ function TemperatureForm({ onSubmit, onCancel }: FormProps) {
             className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 focus:outline-none"
           >
             <span className="mr-1">{showDateControls ? '▼' : '▶'}</span>
-            Datum aanpassen?
+            Tijdstip aanpassen?
           </button>
           
           {showDateControls && (
@@ -1035,7 +1043,7 @@ function DiaperForm({ onSubmit, onCancel }: FormProps) {
           className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 focus:outline-none"
         >
           <span className="mr-1">{showDateControls ? '▼' : '▶'}</span>
-          Datum aanpassen?
+          Tijdstip aanpassen?
         </button>
         
         {showDateControls && (
@@ -1257,7 +1265,10 @@ function RecordItem({ record }: RecordItemProps) {
                         record.breastSide === 'left' ? 'linker borst' : 'rechter borst';
         return { icon: '🥛', text: `Kolven: ${record.amount} ml (${sideText})`, time, date };
       case 'temperature':
-        return { icon: '🌡️', text: `Temperatuur: ${record.value}°C`, time, date };
+        const tempValue = record.value as number;
+        const tempIcon = tempValue >= 38.5 ? '🌡️🔥' : tempValue <= 35.0 ? '🌡️❄️' : '🌡️';
+        const tempText = `Temperatuur: ${record.value}°C${tempValue >= 38.5 ? ' (Extreem hoog!)' : tempValue <= 35.0 ? ' (Extreem laag!)' : tempValue >= 37.6 ? ' (Verhoogd)' : ''}`;
+        return { icon: tempIcon, text: tempText, time, date };
       case 'diaper':
         const amountText = record.diaperAmount ? ` (${record.diaperAmount})` : '';
         return { icon: '👶', text: `Luier: ${record.diaperType}${amountText}`, time, date };
