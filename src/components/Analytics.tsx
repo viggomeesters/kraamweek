@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { BabyRecord, MotherRecord } from '@/types';
 import { DataService } from '@/lib/dataService';
+import { formatDateChart } from '@/lib/dateUtils';
 
 interface AnalyticsSectionProps {
   babyRecords: BabyRecord[];
@@ -240,11 +241,6 @@ function SimpleLineChart({ data, metric }: SimpleLineChartProps) {
     }
   };
   
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return `${date.getDate()}/${date.getMonth() + 1}`;
-  };
-  
   return (
     <div className="w-full overflow-x-auto">
       <svg width={width} height={height} className="border border-gray-200 rounded">
@@ -288,7 +284,7 @@ function SimpleLineChart({ data, metric }: SimpleLineChartProps) {
                   fontSize="12" 
                   fill="#6b7280"
                 >
-                  {formatDate(p.date)}
+                  {formatDateChart(p.date)}
                 </text>
               );
             }
@@ -315,7 +311,7 @@ function SimpleLineChart({ data, metric }: SimpleLineChartProps) {
               />
               {/* Tooltip on hover */}
               <title>
-                {formatDate(p.date)}: {formatValue(p.value)}
+                {formatDateChart(p.date)}: {formatValue(p.value)}
               </title>
             </g>
           ))}

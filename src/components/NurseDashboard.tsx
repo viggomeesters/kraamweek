@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { AppData, Alert, BabyRecord, MotherRecord, FamilyObservation, Task, BabyProfile } from '@/types';
 import { DataService } from '@/lib/dataService';
 import { AnalyticsSection } from './Analytics';
+import { formatTime24, formatDateDDMMYYYY, formatDateTime24, formatDateLong } from '@/lib/dateUtils';
 
 export default function NurseDashboard() {
   const [data, setData] = useState<AppData>(DataService.loadData());
@@ -137,7 +138,7 @@ function AlertItem({ alert, onAcknowledge }: AlertItemProps) {
             <span className="font-medium">{alert.message}</span>
           </div>
           <div className="text-sm opacity-75">
-            {new Date(alert.timestamp).toLocaleString('nl-NL', { hour12: false })}
+            {formatDateTime24(alert.timestamp)}
           </div>
         </div>
         
@@ -180,7 +181,7 @@ function AlertItem({ alert, onAcknowledge }: AlertItemProps) {
         <span className="text-lg">{getAlertIcon()}</span>
         <span className="font-medium">{alert.message}</span>
         <span className="text-xs opacity-75">
-          {new Date(alert.timestamp).toLocaleString('nl-NL', { hour12: false })}
+          {formatDateTime24(alert.timestamp)}
         </span>
       </div>
       <button
@@ -419,8 +420,8 @@ function BabyOverview({ records }: BabyOverviewProps) {
                     </div>
                   </div>
                   <div className="text-right text-sm text-gray-500">
-                    <div>{new Date(record.timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
-                    <div>{new Date(record.timestamp).toLocaleDateString('nl-NL')}</div>
+                    <div>{formatTime24(record.timestamp)}</div>
+                    <div>{formatDateDDMMYYYY(record.timestamp)}</div>
                   </div>
                 </div>
               </div>
@@ -498,8 +499,8 @@ function MotherSection({ records, onRefresh }: MotherSectionProps) {
                     </div>
                   </div>
                   <div className="text-right text-sm text-gray-500">
-                    <div>{new Date(record.timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
-                    <div>{new Date(record.timestamp).toLocaleDateString('nl-NL')}</div>
+                    <div>{formatTime24(record.timestamp)}</div>
+                    <div>{formatDateDDMMYYYY(record.timestamp)}</div>
                   </div>
                 </div>
               </div>
@@ -766,8 +767,8 @@ function ObservationsSection({ observations, onRefresh }: ObservationsSectionPro
                     )}
                   </div>
                   <div className="text-right text-sm text-gray-500">
-                    <div>{new Date(observation.timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
-                    <div>{new Date(observation.timestamp).toLocaleDateString('nl-NL')}</div>
+                    <div>{formatTime24(observation.timestamp)}</div>
+                    <div>{formatDateDDMMYYYY(observation.timestamp)}</div>
                   </div>
                 </div>
               </div>
@@ -1054,7 +1055,7 @@ function TaskItem({ task, onUpdate }: TaskItemProps) {
         
         {task.completedAt && (
           <p className="text-xs text-green-600">
-            ✅ Voltooid op {new Date(task.completedAt).toLocaleDateString('nl-NL')}
+            ✅ Voltooid op {formatDateDDMMYYYY(task.completedAt)}
           </p>
         )}
       </div>
@@ -1689,10 +1690,10 @@ function AlertHistoryItem({ alert }: AlertHistoryItemProps) {
               
               <div className="text-xs text-gray-500 space-y-1">
                 <div>
-                  Ontstaan: {new Date(alert.timestamp).toLocaleString('nl-NL', { hour12: false })}
+                  Ontstaan: {formatDateTime24(alert.timestamp)}
                 </div>
                 <div>
-                  Afgehandeld: {new Date(alert.acknowledgedAt || '').toLocaleString('nl-NL', { hour12: false })} door {alert.acknowledgedBy}
+                  Afgehandeld: {formatDateTime24(alert.acknowledgedAt || "")} door {alert.acknowledgedBy}
                 </div>
                 <div>
                   {formatTimeAgo(alert.acknowledgedAt || '')}
@@ -2166,13 +2167,6 @@ interface BabyProfileDisplayProps {
 }
 
 function BabyProfileDisplay({ profile }: BabyProfileDisplayProps) {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('nl-NL', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
 
   const calculateAge = (birthDate: string) => {
     const birth = new Date(birthDate);
@@ -2206,7 +2200,7 @@ function BabyProfileDisplay({ profile }: BabyProfileDisplayProps) {
           <p className="text-gray-600">Volledige naam: {profile.voornaam} {profile.achternaam}</p>
         )}
         <p className="text-lg text-gray-700 mt-2">
-          Geboren op {formatDate(profile.geboortedatum)}
+          Geboren op {formatDateLong(profile.geboortedatum)}
           {profile.geboortijd && ` om ${profile.geboortijd}`}
         </p>
         <p className="text-indigo-600 font-medium">
@@ -2317,9 +2311,9 @@ function BabyProfileDisplay({ profile }: BabyProfileDisplayProps) {
 
       {/* Profile metadata */}
       <div className="border-t border-gray-200 pt-6 text-sm text-gray-500">
-        <p>Profiel aangemaakt: {formatDate(profile.createdAt)}</p>
+        <p>Profiel aangemaakt: {formatDateLong(profile.createdAt)}</p>
         {profile.updatedAt !== profile.createdAt && (
-          <p>Laatst bijgewerkt: {formatDate(profile.updatedAt)}</p>
+          <p>Laatst bijgewerkt: {formatDateLong(profile.updatedAt)}</p>
         )}
       </div>
     </div>
