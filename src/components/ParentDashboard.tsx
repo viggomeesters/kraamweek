@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BabyRecord, AppData, BabyProfile, User, Alert } from '@/types';
+import { BabyRecord, AppData, BabyProfile, User, Alert, MotherRecord, Task } from '@/types';
 import { DataService } from '@/lib/dataService';
 import { AnalyticsSection } from './Analytics';
 
@@ -22,7 +22,7 @@ interface ParentDashboardProps {
 export default function ParentDashboard({ user }: ParentDashboardProps) {
   const [data, setData] = useState<AppData>(DataService.loadData());
   const [activeForm, setActiveForm] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'recent' | 'overview' | 'analytics' | 'profile'>('profile');
+  const [activeTab, setActiveTab] = useState<'recent' | 'overview' | 'analytics' | 'profile' | 'actions'>('profile');
 
   const refreshData = () => {
     setData(DataService.loadData());
@@ -30,6 +30,14 @@ export default function ParentDashboard({ user }: ParentDashboardProps) {
 
   const handleAddRecord = (record: Omit<BabyRecord, 'id'>) => {
     DataService.addBabyRecord(record);
+    refreshData();
+    setActiveForm(null);
+    // Switch to recent tab to show the newly added record
+    setActiveTab('recent');
+  };
+
+  const handleAddMotherRecord = (record: Omit<MotherRecord, 'id'>) => {
+    DataService.addMotherRecord(record);
     refreshData();
     setActiveForm(null);
     // Switch to recent tab to show the newly added record
@@ -115,6 +123,16 @@ export default function ParentDashboard({ user }: ParentDashboardProps) {
           </div>
         )}
 
+        {activeTab === 'actions' && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-gray-900">Acties</h2>
+            <ParentActionsSection 
+              tasks={data.tasks}
+              onRefresh={refreshData}
+            />
+          </div>
+        )}
+
         {/* Form Modal */}
         {activeForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -138,6 +156,12 @@ export default function ParentDashboard({ user }: ParentDashboardProps) {
                 {activeForm === 'note' && (
                   <NoteForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
                 )}
+                {activeForm === 'weight' && (
+                  <BabyWeightForm onSubmit={handleAddRecord} onCancel={() => setActiveForm(null)} />
+                )}
+                {activeForm === 'mother_mood' && (
+                  <MotherMoodForm onSubmit={handleAddMotherRecord} onCancel={() => setActiveForm(null)} />
+                )}
               </div>
             </div>
           </div>
@@ -146,13 +170,16 @@ export default function ParentDashboard({ user }: ParentDashboardProps) {
 
       {/* Floating Action Button - Only for Parents */}
       {user.role === 'parents' && (
-        <FloatingActionButton onActionSelect={(action) => setActiveForm(action)} />
+        <FloatingActionButton 
+          onActionSelect={(action) => setActiveForm(action)} 
+          userRole={user.role}
+        />
       )}
 
       {/* Bottom Navigation */}
       <BottomNavigation 
         activeTab={activeTab} 
-        onTabChange={(tab) => setActiveTab(tab as 'recent' | 'overview' | 'analytics' | 'profile')}
+        onTabChange={(tab) => setActiveTab(tab as 'recent' | 'overview' | 'analytics' | 'profile' | 'actions')}
         userRole={user.role}
       />
     </>
@@ -1653,5 +1680,646 @@ function AlertItem({ alert, onAcknowledge }: AlertItemProps) {
         Afhandelen
       </button>
     </div>
+  );
+}
+// Parent Actions Section - shows tasks assigned to parents
+interface ParentActionsSectionProps {
+  tasks: Task[];
+  onRefresh: () => void;
+}
+
+function ParentActionsSection({ tasks, onRefresh }: ParentActionsSectionProps) {
+  const [showForm, setShowForm] = useState(false);
+
+  // Filter tasks relevant to parents
+  const parentTasks = tasks.filter(task => 
+    task.assignedTo === 'parents' || task.createdBy === 'parents'
+  );
+
+  const pendingTasks = parentTasks.filter(task => task.status === 'pending');
+  const inProgressTasks = parentTasks.filter(task => task.status === 'in_progress');
+  const completedTasks = parentTasks.filter(task => task.status === 'completed').slice(-3);
+
+  const handleAddTask = (task: Omit<Task, 'id' | 'createdAt'>) => {
+    DataService.addTask(task);
+    onRefresh();
+    setShowForm(false);
+  };
+
+  const handleUpdateTask = (id: string, updates: Partial<Task>) => {
+    DataService.updateTask(id, updates);
+    onRefresh();
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white rounded-lg shadow-md p-4 text-center">
+          <div className="text-2xl mb-2">📋</div>
+          <div className="text-2xl font-bold text-orange-600">{pendingTasks.length}</div>
+          <div className="text-sm text-gray-600">Te doen</div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-md p-4 text-center">
+          <div className="text-2xl mb-2">✅</div>
+          <div className="text-2xl font-bold text-green-600">{completedTasks.length}</div>
+          <div className="text-sm text-gray-600">Recent voltooid</div>
+        </div>
+      </div>
+
+      {/* Add Task Button */}
+      <div className="flex justify-center">
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="bg-indigo-600 text-white px-6 py-3 rounded-full hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 flex items-center space-x-2"
+        >
+          <span className="text-lg">💡</span>
+          <span>{showForm ? 'Annuleren' : 'Suggestie doen'}</span>
+        </button>
+      </div>
+
+      {/* Task Suggestion Form */}
+      {showForm && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <ParentTaskForm onSubmit={handleAddTask} onCancel={() => setShowForm(false)} />
+        </div>
+      )}
+
+      {/* Task Lists */}
+      <div className="space-y-6">
+        {/* Pending Tasks */}
+        {pendingTasks.length > 0 && (
+          <div className="bg-white rounded-lg shadow-md">
+            <div className="p-4 border-b border-gray-200">
+              <h4 className="font-semibold text-gray-900">Te doen ({pendingTasks.length})</h4>
+            </div>
+            <div className="divide-y divide-gray-200">
+              {pendingTasks.map((task) => (
+                <ParentTaskItem key={task.id} task={task} onUpdate={handleUpdateTask} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* In Progress Tasks */}
+        {inProgressTasks.length > 0 && (
+          <div className="bg-white rounded-lg shadow-md">
+            <div className="p-4 border-b border-gray-200">
+              <h4 className="font-semibold text-gray-900">Bezig ({inProgressTasks.length})</h4>
+            </div>
+            <div className="divide-y divide-gray-200">
+              {inProgressTasks.map((task) => (
+                <ParentTaskItem key={task.id} task={task} onUpdate={handleUpdateTask} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Completed Tasks */}
+        {completedTasks.length > 0 && (
+          <div className="bg-white rounded-lg shadow-md">
+            <div className="p-4 border-b border-gray-200">
+              <h4 className="font-semibold text-gray-900">Recent voltooid</h4>
+            </div>
+            <div className="divide-y divide-gray-200">
+              {completedTasks.map((task) => (
+                <ParentTaskItem key={task.id} task={task} onUpdate={handleUpdateTask} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Empty State */}
+      {parentTasks.length === 0 && (
+        <div className="bg-white rounded-lg shadow-md p-8 text-center">
+          <div className="text-6xl mb-4">📝</div>
+          <h4 className="text-lg font-medium text-gray-900 mb-2">Nog geen taken</h4>
+          <p className="text-gray-600 mb-4">
+            Gebruik de suggestie knop om een verzoek te doen aan de kraamhulp.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Parent Task Form Component
+interface ParentTaskFormProps {
+  onSubmit: (task: Omit<Task, 'id' | 'createdAt'>) => void;
+  onCancel: () => void;
+}
+
+function ParentTaskForm({ onSubmit, onCancel }: ParentTaskFormProps) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState<Task['category']>('household');
+  const [priority, setPriority] = useState<Task['priority']>('medium');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    onSubmit({
+      title: title.trim(),
+      description: description.trim() || undefined,
+      category,
+      priority,
+      status: 'pending',
+      assignedTo: 'kraamhulp',
+      createdBy: 'parents',
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h4 className="text-lg font-medium">Suggestie voor kraamhulp</h4>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Wat zou je graag willen? *
+        </label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder="Bijv: Was draaien, boodschappen doen..."
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Extra uitleg (optioneel)
+        </label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          rows={3}
+          placeholder="Bijv: Er ligt veel wasgoed, zou fijn zijn als dit gedaan kan worden..."
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Categorie
+          </label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as Task['category'])}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="household">Huishoudelijk</option>
+            <option value="baby_care">Baby verzorging</option>
+            <option value="mother_care">Moeder verzorging</option>
+            <option value="administrative">Administratief</option>
+            <option value="other">Anders</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Hoe urgent?
+          </label>
+          <select
+            value={priority}
+            onChange={(e) => setPriority(e.target.value as Task['priority'])}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="low">Wanneer het uitkomt</option>
+            <option value="medium">Zou fijn zijn</option>
+            <option value="high">Graag vandaag nog</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="flex space-x-3">
+        <button
+          type="submit"
+          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          Suggestie versturen
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+        >
+          Annuleren
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// Parent Task Item Component
+interface ParentTaskItemProps {
+  task: Task;
+  onUpdate: (id: string, updates: Partial<Task>) => void;
+}
+
+function ParentTaskItem({ task, onUpdate }: ParentTaskItemProps) {
+  const getPriorityColor = () => {
+    switch (task.priority) {
+      case 'high': return 'text-red-600 bg-red-100';
+      case 'medium': return 'text-yellow-600 bg-yellow-100';
+      case 'low': return 'text-green-600 bg-green-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  const getPriorityLabel = () => {
+    switch (task.priority) {
+      case 'high': return 'Urgent';
+      case 'medium': return 'Zou fijn zijn';
+      case 'low': return 'Wanneer het uitkomt';
+      default: return task.priority;
+    }
+  };
+
+  const getStatusIcon = () => {
+    switch (task.status) {
+      case 'pending': return '⏳';
+      case 'in_progress': return '🔄';
+      case 'completed': return '✅';
+      default: return '📋';
+    }
+  };
+
+  return (
+    <div className="p-4">
+      <div className="space-y-3">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center space-x-2 mb-1">
+              <span className="text-lg">{getStatusIcon()}</span>
+              <h5 className="font-medium text-gray-900">{task.title}</h5>
+            </div>
+            
+            {task.description && (
+              <p className="text-sm text-gray-600 mb-2">{task.description}</p>
+            )}
+            
+            <div className="flex items-center space-x-3 text-xs text-gray-500">
+              <span className={`px-2 py-1 rounded-full ${getPriorityColor()}`}>
+                {getPriorityLabel()}
+              </span>
+              <span>Categorie: {task.category.replace('_', ' ')}</span>
+            </div>
+          </div>
+        </div>
+        
+        {task.createdBy === 'parents' && task.status === 'pending' && (
+          <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+            💡 Je suggestie is verstuurd naar de kraamhulp
+          </div>
+        )}
+        
+        {task.status !== 'completed' && task.createdBy === 'parents' && (
+          <div className="flex space-x-2">
+            {task.status === 'pending' && (
+              <button
+                onClick={() => onUpdate(task.id, { status: 'in_progress' })}
+                className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"
+              >
+                Zelf beginnen
+              </button>
+            )}
+            <button
+              onClick={() => onUpdate(task.id, { status: 'completed' })}
+              className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200"
+            >
+              Markeer als klaar
+            </button>
+          </div>
+        )}
+        
+        {task.completedAt && (
+          <p className="text-xs text-green-600">
+            ✅ Voltooid op {formatDateDDMMYYYY(task.completedAt)}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Baby Weight Form Component (reused from NurseDashboard)
+interface BabyWeightFormProps {
+  onSubmit: (record: Omit<BabyRecord, 'id'>) => void;
+  onCancel: () => void;
+}
+
+function BabyWeightForm({ onSubmit, onCancel }: BabyWeightFormProps) {
+  const [weight, setWeight] = useState('');
+  const [notes, setNotes] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      timestamp: new Date().toISOString(),
+      type: 'weight',
+      weight: parseInt(weight),
+      notes: notes.trim() || undefined,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h3 className="text-lg font-medium">Baby wegen</h3>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Gewicht (gram)
+        </label>
+        <input
+          type="number"
+          value={weight}
+          onChange={(e) => setWeight(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+          min="1000"
+          max="8000"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Notities (optioneel)
+        </label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+          rows={3}
+          placeholder="Bijzonderheden bij de weging..."
+        />
+      </div>
+      
+      <div className="flex space-x-3">
+        <button
+          type="submit"
+          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          Opslaan
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+        >
+          Annuleren
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// Mother Mood Form Component
+interface MotherMoodFormProps {
+  onSubmit: (record: Omit<MotherRecord, 'id'>) => void;
+  onCancel: () => void;
+}
+
+function MotherMoodForm({ onSubmit, onCancel }: MotherMoodFormProps) {
+  const [mood, setMood] = useState<MotherRecord['mood']>('good');
+  const [notes, setNotes] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    onSubmit({
+      timestamp: new Date().toISOString(),
+      type: 'mood',
+      mood,
+      notes: notes.trim() || undefined,
+    });
+  };
+
+  const moodOptions = [
+    { value: 'excellent', label: 'Uitstekend', icon: '😊', color: 'bg-green-100 border-green-300 text-green-800' },
+    { value: 'good', label: 'Goed', icon: '🙂', color: 'bg-green-50 border-green-200 text-green-700' },
+    { value: 'okay', label: 'Oké', icon: '😐', color: 'bg-yellow-50 border-yellow-200 text-yellow-700' },
+    { value: 'low', label: 'Laag', icon: '😔', color: 'bg-orange-50 border-orange-200 text-orange-700' },
+    { value: 'very_low', label: 'Zeer laag', icon: '😢', color: 'bg-red-50 border-red-200 text-red-700' },
+  ];
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h3 className="text-lg font-medium">Hoe voel je je?</h3>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          Stemming
+        </label>
+        <div className="space-y-2">
+          {moodOptions.map((option) => (
+            <label
+              key={option.value}
+              className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                mood === option.value
+                  ? option.color + ' border-current'
+                  : 'border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              <input
+                type="radio"
+                name="mood"
+                value={option.value}
+                checked={mood === option.value}
+                onChange={(e) => setMood(e.target.value as MotherRecord['mood'])}
+                className="sr-only"
+              />
+              <span className="text-2xl mr-3">{option.icon}</span>
+              <span className="font-medium">{option.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Hoe kom je aan deze stemming? (optioneel)
+        </label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+          rows={3}
+          placeholder="Vertel over je dag, gevoel, of wat er speelt..."
+        />
+      </div>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <span className="text-blue-600">💙</span>
+          </div>
+          <div className="ml-3">
+            <h4 className="text-sm font-medium text-blue-800">Je doet het geweldig!</h4>
+            <div className="text-sm text-blue-700">
+              <p>Het is belangrijk om je gevoelens te delen. De kraamhulp kan je extra ondersteunen als dat nodig is.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex space-x-3">
+        <button
+          type="submit"
+          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          Opslaan
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+        >
+          Annuleren
+        </button>
+      </div>
+    </form>
   );
 }

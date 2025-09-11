@@ -13,6 +13,7 @@ export default function BottomNavigation({ activeTab, onTabChange, userRole }: B
     { id: 'analytics', label: 'Analytics', icon: '📊' },
     { id: 'overview', label: 'Overzicht', icon: '📋' },
     { id: 'recent', label: 'Recent', icon: '🕒' },
+    { id: 'actions', label: 'Acties', icon: '⚡' },
   ];
 
   // Navigation items for kraamhulp
@@ -20,7 +21,8 @@ export default function BottomNavigation({ activeTab, onTabChange, userRole }: B
     { id: 'profile', label: 'Profiel', icon: '📄' },
     { id: 'analytics', label: 'Analytics', icon: '📊' },
     { id: 'overview', label: 'Baby', icon: '👶' },
-    { id: 'recent', label: 'Recent', icon: '🕒' },
+    { id: 'mother', label: 'Moeder', icon: '👩' },
+    { id: 'actions', label: 'Acties', icon: '⚡' },
   ];
 
   const navItems = userRole === 'parents' ? parentNavItems : kraamhulpNavItems;

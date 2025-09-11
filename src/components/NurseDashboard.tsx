@@ -8,13 +8,47 @@ import { AnalyticsSection } from './Analytics';
 import { formatTime24, formatDateDDMMYYYY, formatDateTime24, formatDateLong } from '@/lib/dateUtils';
 import BottomNavigation from './BottomNavigation';
 import MobileOverview from './MobileOverview';
+import FloatingActionButton from './FloatingActionButton';
 
 export default function NurseDashboard() {
   const [data, setData] = useState<AppData>(DataService.loadData());
-  const [activeTab, setActiveTab] = useState<'recent' | 'overview' | 'analytics' | 'profile'>('profile');
+  const [activeTab, setActiveTab] = useState<'overview' | 'mother' | 'analytics' | 'profile' | 'actions'>('profile');
+  const [activeForm, setActiveForm] = useState<string | null>(null);
 
   const refreshData = () => {
     setData(DataService.loadData());
+  };
+
+  const handleAddBabyRecord = (record: Omit<BabyRecord, 'id'>) => {
+    DataService.addBabyRecord(record);
+    refreshData();
+    setActiveForm(null);
+    // Switch to overview tab to show the newly added record
+    setActiveTab('overview');
+  };
+
+  const handleAddMotherRecord = (record: Omit<MotherRecord, 'id'>) => {
+    DataService.addMotherRecord(record);
+    refreshData();
+    setActiveForm(null);
+    // Switch to mother tab to show the newly added record
+    setActiveTab('mother');
+  };
+
+  const handleAddObservation = (observation: Omit<FamilyObservation, 'id'>) => {
+    DataService.addFamilyObservation(observation);
+    refreshData();
+    setActiveForm(null);
+    // Switch to actions tab to show the newly added observation
+    setActiveTab('actions');
+  };
+
+  const handleAddTask = (task: Omit<Task, 'id' | 'createdAt'>) => {
+    DataService.addTask(task);
+    refreshData();
+    setActiveForm(null);
+    // Switch to actions tab to show the newly added task
+    setActiveTab('actions');
   };
 
   // Get unacknowledged alerts
@@ -50,33 +84,17 @@ export default function NurseDashboard() {
         )}
 
         {/* Tab Content */}
-        {activeTab === 'recent' && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-900">
-              Recente registraties
-            </h2>
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-              {recentRecords.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <div className="text-4xl mb-2">📋</div>
-                  <p>Nog geen registraties</p>
-                  <p className="text-sm mt-1">Wacht op nieuwe registraties van ouders</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-200">
-                  {recentRecords.map((record) => (
-                    <RecordItem key={record.id} record={record} />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
         {activeTab === 'overview' && (
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-gray-900">Baby Overzicht</h2>
             <BabyOverview records={data.babyRecords} />
+          </div>
+        )}
+
+        {activeTab === 'mother' && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-gray-900">Moeder</h2>
+            <MotherSection records={data.motherRecords} onRefresh={refreshData} />
           </div>
         )}
 
@@ -93,15 +111,130 @@ export default function NurseDashboard() {
             <BabyProfileSection onRefresh={refreshData} />
           </div>
         )}
+
+        {activeTab === 'actions' && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-gray-900">Acties & Waarschuwingen</h2>
+            <ActionsSection 
+              alerts={data.alerts}
+              tasks={data.tasks}
+              observations={data.familyObservations}
+              onRefresh={refreshData}
+            />
+          </div>
+        )}
       </div>
 
       {/* Bottom Navigation */}
       <BottomNavigation 
         activeTab={activeTab} 
-        onTabChange={(tab) => setActiveTab(tab as 'recent' | 'overview' | 'analytics' | 'profile')}
+        onTabChange={(tab) => setActiveTab(tab as 'overview' | 'mother' | 'analytics' | 'profile' | 'actions')}
         userRole="kraamhulp"
       />
     </>
+  );
+}
+
+// Actions Section Component - combines alerts, tasks, and observations
+interface ActionsSectionProps {
+  alerts: Alert[];
+  tasks: Task[];
+  observations: FamilyObservation[];
+  onRefresh: () => void;
+}
+
+function ActionsSection({ alerts, tasks, observations, onRefresh }: ActionsSectionProps) {
+  const [activeSubTab, setActiveSubTab] = useState<'alerts' | 'tasks' | 'observations'>('alerts');
+
+  // Get unacknowledged alerts
+  const unacknowledgedAlerts = alerts.filter(alert => !alert.acknowledged);
+  
+  // Get pending tasks
+  const pendingTasks = tasks.filter(task => task.status === 'pending');
+  
+  // Get recent observations
+  const recentObservations = observations.slice(-5);
+
+  return (
+    <div className="space-y-6">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg shadow-md p-4 text-center">
+          <div className="text-2xl mb-2">⚠️</div>
+          <div className="text-2xl font-bold text-red-600">{unacknowledgedAlerts.length}</div>
+          <div className="text-sm text-gray-600">Nieuwe waarschuwingen</div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-md p-4 text-center">
+          <div className="text-2xl mb-2">✅</div>
+          <div className="text-2xl font-bold text-orange-600">{pendingTasks.length}</div>
+          <div className="text-sm text-gray-600">Openstaande taken</div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-md p-4 text-center">
+          <div className="text-2xl mb-2">📋</div>
+          <div className="text-2xl font-bold text-blue-600">{recentObservations.length}</div>
+          <div className="text-sm text-gray-600">Recente observaties</div>
+        </div>
+      </div>
+
+      {/* Sub-tabs */}
+      <div className="bg-white rounded-lg shadow-md">
+        <div className="flex border-b border-gray-200">
+          {[
+            { id: 'alerts', label: 'Waarschuwingen', count: unacknowledgedAlerts.length },
+            { id: 'tasks', label: 'Taken', count: pendingTasks.length },
+            { id: 'observations', label: 'Observaties', count: recentObservations.length },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSubTab(tab.id as 'alerts' | 'tasks' | 'observations')}
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                activeSubTab === tab.id
+                  ? 'text-indigo-600 border-b-2 border-indigo-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {tab.label} {tab.count > 0 && `(${tab.count})`}
+            </button>
+          ))}
+        </div>
+
+        <div className="p-6">
+          {activeSubTab === 'alerts' && (
+            <div className="space-y-4">
+              {unacknowledgedAlerts.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-2">✅</div>
+                  <p className="text-gray-500">Geen nieuwe waarschuwingen</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {unacknowledgedAlerts.map((alert) => (
+                    <AlertItem 
+                      key={alert.id} 
+                      alert={alert} 
+                      onAcknowledge={(comment) => {
+                        DataService.acknowledgeAlert(alert.id, 'Kraamhulp', comment);
+                        onRefresh();
+                      }} 
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeSubTab === 'tasks' && (
+            <TasksSection tasks={tasks} onRefresh={onRefresh} />
+          )}
+
+          {activeSubTab === 'observations' && (
+            <ObservationsSection observations={observations} onRefresh={onRefresh} />
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -2369,6 +2502,7 @@ function RecordItem({ record }: RecordItemProps) {
         const amountText = record.diaperAmount ? ` (${record.diaperAmount})` : '';
         return { icon: '👶', text: `Luier: ${record.diaperType}${amountText}`, time, date };
       case 'note':
+
         const categoryIcon = record.noteCategory === 'question' ? '❓' : 
                            record.noteCategory === 'todo' ? '✅' : '📝';
         const categoryText = record.noteCategory === 'question' ? 'Vraag' :
