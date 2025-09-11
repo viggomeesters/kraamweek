@@ -231,10 +231,10 @@ function SleepForm({ onSubmit, onCancel }: FormProps) {
 
   const handleDurationChange = (newDuration: number) => {
     setDuration(newDuration);
-    if (startTime) {
-      calculateEndTimeFromDuration(startTime, newDuration);
-    } else if (endTime) {
+    if (endTime) {
       calculateStartTimeFromDuration(endTime, newDuration);
+    } else if (startTime) {
+      calculateEndTimeFromDuration(startTime, newDuration);
     }
   };
 
