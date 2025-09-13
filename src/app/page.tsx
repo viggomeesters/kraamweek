@@ -1,30 +1,40 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User } from '@/types';
+import { AppData, BabyRecord, MotherRecord } from '@/types';
 import { DataService } from '@/lib/dataService';
-import UserSelector from '@/components/UserSelector';
-import DashboardLayout from '@/components/DashboardLayout';
-import ParentDashboard from '@/components/ParentDashboard';
-import NurseDashboard from '@/components/NurseDashboard';
+import BottomNav from '@/components/BottomNav';
+import Profile from '@/components/Profile';
+import Overview from '@/components/Overview';
+import LoggingGallery from '@/components/LoggingGallery';
 
 export default function Home() {
-  const [user, setUser] = useState<User | null>(null);
+  const [activeTab, setActiveTab] = useState<'profile' | 'overview' | 'logging'>('profile');
+  const [data, setData] = useState<AppData>(DataService.loadData());
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const savedUser = DataService.loadUser();
-    setUser(savedUser);
+    // Load initial data
+    setData(DataService.loadData());
     setIsLoading(false);
   }, []);
 
-  const handleUserSelected = (selectedUser: User) => {
-    setUser(selectedUser);
+  const refreshData = () => {
+    setData(DataService.loadData());
   };
 
-  const handleLogout = () => {
-    setUser(null);
+  const handleAddBabyRecord = (record: Omit<BabyRecord, 'id'>) => {
+    DataService.addBabyRecord(record);
+    refreshData();
+    // Switch to overview to show the new record
+    setActiveTab('overview');
+  };
+
+  const handleAddMotherRecord = (record: Omit<MotherRecord, 'id'>) => {
+    DataService.addMotherRecord(record);
+    refreshData();
+    // Switch to overview to show the new record
+    setActiveTab('overview');
   };
 
   if (isLoading) {
@@ -38,17 +48,28 @@ export default function Home() {
     );
   }
 
-  if (!user) {
-    return <UserSelector onUserSelected={handleUserSelected} />;
-  }
+  const renderActiveTab = () => {
+    switch (activeTab) {
+      case 'profile':
+        return <Profile profile={data.babyProfile} onProfileUpdate={refreshData} />;
+      case 'overview':
+        return <Overview data={data} />;
+      case 'logging':
+        return (
+          <LoggingGallery
+            onAddBabyRecord={handleAddBabyRecord}
+            onAddMotherRecord={handleAddMotherRecord}
+          />
+        );
+      default:
+        return <Profile profile={data.babyProfile} onProfileUpdate={refreshData} />;
+    }
+  };
 
   return (
-    <DashboardLayout user={user} onLogout={handleLogout}>
-      {user.role === 'kraamhulp' ? (
-        <NurseDashboard />
-      ) : (
-        <ParentDashboard user={user} />
-      )}
-    </DashboardLayout>
+    <div className="min-h-screen bg-gray-50">
+      {renderActiveTab()}
+      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+    </div>
   );
 }

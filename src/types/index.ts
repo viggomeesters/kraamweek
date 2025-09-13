@@ -99,10 +99,3 @@ export interface AppData {
   alerts: Alert[];
   babyProfile?: BabyProfile; // Single baby profile
 }
-
-export type UserRole = 'parents' | 'kraamhulp';
-
-export interface User {
-  role: UserRole;
-  name: string;
-}

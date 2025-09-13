@@ -1,7 +1,6 @@
-import { AppData, BabyRecord, MotherRecord, FamilyObservation, Task, Alert, User, BabyProfile } from '@/types';
+import { AppData, BabyRecord, MotherRecord, FamilyObservation, Task, Alert, BabyProfile } from '@/types';
 
 const STORAGE_KEY = 'kraamweek-data';
-const USER_KEY = 'kraamweek-user';
 
 // Default/initial data
 const getInitialData = (): AppData => ({
@@ -38,34 +37,6 @@ export class DataService {
     } catch (error) {
       console.error('Failed to save data:', error);
     }
-  }
-
-  // User management
-  static loadUser(): User | null {
-    if (typeof window === 'undefined') return null;
-    
-    try {
-      const stored = localStorage.getItem(USER_KEY);
-      return stored ? JSON.parse(stored) : null;
-    } catch (error) {
-      console.error('Failed to load user:', error);
-      return null;
-    }
-  }
-
-  static saveUser(user: User): void {
-    if (typeof window === 'undefined') return;
-    
-    try {
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
-    } catch (error) {
-      console.error('Failed to save user:', error);
-    }
-  }
-
-  static clearUser(): void {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem(USER_KEY);
   }
 
   // Baby records
