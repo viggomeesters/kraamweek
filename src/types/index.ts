@@ -1,4 +1,5 @@
 // Data types for the Kraamweek app
+// Strict TypeScript interfaces with no 'any' types
 
 export interface BabyRecord {
   id: string;
@@ -100,3 +101,23 @@ export interface AppData {
   alerts: Alert[];
   babyProfile?: BabyProfile; // Single baby profile
 }
+
+// Utility types for better type safety
+export type BabyRecordType = BabyRecord['type'];
+export type MotherRecordType = MotherRecord['type'];
+export type TaskStatus = Task['status'];
+export type AlertType = Alert['type'];
+export type RecordWithTimestamp = BabyRecord | MotherRecord | Alert;
+
+// Type guards for runtime type checking
+export const isBabyRecord = (record: RecordWithTimestamp): record is BabyRecord => {
+  return 'type' in record && ['sleep', 'feeding', 'temperature', 'diaper', 'jaundice', 'note', 'pumping', 'weight'].includes(record.type);
+};
+
+export const isMotherRecord = (record: RecordWithTimestamp): record is MotherRecord => {
+  return 'type' in record && ['temperature', 'blood_pressure', 'mood', 'pain', 'feeding_session', 'note'].includes(record.type);
+};
+
+export const isAlert = (record: RecordWithTimestamp): record is Alert => {
+  return 'category' in record && 'acknowledged' in record;
+};

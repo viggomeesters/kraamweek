@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { getBabyLoggingTypes, getMotherLoggingTypes, LoggingTypeConfig, LoggingField } from '@/config/loggingTypes';
+import { getBabyLoggingTypes, getMotherLoggingTypes, LoggingTypeConfig } from '@/config/loggingTypes';
 import { BabyRecord, MotherRecord } from '@/types';
 import { formatTime24 } from '@/lib/dateUtils';
+import { FormField, DateTimeFields } from '@/components/FormFields';
 
 interface LoggingGalleryProps {
   onAddBabyRecord: (record: Omit<BabyRecord, 'id'>) => void;
@@ -35,11 +36,13 @@ export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord, onS
     setFormData(prev => ({ ...prev, [fieldId]: value }));
   };
 
+  const handleDateTimeChange = (field: 'date' | 'time', value: string) => {
+    setCustomDateTime(prev => ({ ...prev, [field]: value }));
+  };
+
   const handleSubmit = (typeConfig: LoggingTypeConfig) => {
     // Validate required fields
-    const missingFields = typeConfig.fields
-      .filter(field => field.required && !formData[field.id])
-      .map(field => field.label);
+    const missingFields = validateForm(typeConfig);
 
     if (missingFields.length > 0) {
       alert(`Vul de volgende verplichte velden in: ${missingFields.join(', ')}`);
@@ -80,111 +83,11 @@ export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord, onS
     setFormData({});
   };
 
-  const renderField = (field: LoggingField) => {
-    const value = formData[field.id];
-
-    switch (field.type) {
-      case 'text':
-        return (
-          <textarea
-            value={typeof value === 'string' ? value : ''}
-            onChange={(e) => handleFieldChange(field.id, e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder={field.placeholder}
-            rows={3}
-          />
-        );
-
-      case 'number':
-        return (
-          <div className="relative">
-            <input
-              type="number"
-              value={typeof value === 'number' ? value : ''}
-              onChange={(e) => handleFieldChange(field.id, e.target.value ? Number(e.target.value) : '')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder={field.placeholder}
-              min={field.min}
-              max={field.max}
-              step={field.step}
-            />
-            {field.unit && (
-              <span className="absolute right-3 top-2 text-gray-500 text-sm">
-                {field.unit}
-              </span>
-            )}
-          </div>
-        );
-
-      case 'radio':
-        return (
-          <div className="space-y-2">
-            {field.options?.map((option) => (
-              <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name={field.id}
-                  value={option.value}
-                  checked={value === option.value}
-                  onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                  className="text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="text-sm text-gray-700">{option.label}</span>
-              </label>
-            ))}
-          </div>
-        );
-
-      case 'duration':
-        const durationValue = typeof value === 'number' ? value : 0;
-        return (
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <input
-                type="number"
-                value={Math.floor(durationValue / 60)}
-                onChange={(e) => {
-                  const hours = Number(e.target.value) || 0;
-                  const currentMinutes = durationValue % 60;
-                  handleFieldChange(field.id, hours * 60 + currentMinutes);
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="0"
-                min="0"
-                max="24"
-              />
-              <span className="text-xs text-gray-500 mt-1 block">uren</span>
-            </div>
-            <div className="flex-1">
-              <input
-                type="number"
-                value={durationValue % 60}
-                onChange={(e) => {
-                  const minutes = Number(e.target.value) || 0;
-                  const currentHours = Math.floor(durationValue / 60);
-                  handleFieldChange(field.id, currentHours * 60 + minutes);
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="0"
-                min="0"
-                max="59"
-              />
-              <span className="text-xs text-gray-500 mt-1 block">minuten</span>
-            </div>
-          </div>
-        );
-
-      default:
-        return (
-          <input
-            type="text"
-            value={typeof value === 'string' ? value : ''}
-            onChange={(e) => handleFieldChange(field.id, e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder={field.placeholder}
-          />
-        );
-    }
+  // Validation helper
+  const validateForm = (typeConfig: LoggingTypeConfig): string[] => {
+    return typeConfig.fields
+      .filter(field => field.required && !formData[field.id])
+      .map(field => field.label);
   };
 
   if (activeForm) {
@@ -209,59 +112,22 @@ export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord, onS
 
           <div className="bg-white rounded-lg shadow-sm border p-6">
             {/* Date and time selection */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <h3 className="font-medium text-gray-700 mb-3">Datum en tijd</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Datum</label>
-                  <input
-                    type="date"
-                    value={customDateTime.date}
-                    onChange={(e) => setCustomDateTime(prev => ({ ...prev, date: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Tijd</label>
-                  <input
-                    type="text"
-                    value={customDateTime.time}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // Allow partial input while typing, but validate format
-                      if (value === '' || /^([0-1]?[0-9]|2[0-3])(:[0-5][0-9])?$/.test(value)) {
-                        setCustomDateTime(prev => ({ ...prev, time: value }));
-                      }
-                    }}
-                    onBlur={(e) => {
-                      const value = e.target.value;
-                      // Format to HH:MM on blur if valid
-                      if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
-                        const [hours, minutes] = value.split(':');
-                        const formattedTime = `${hours.padStart(2, '0')}:${minutes}`;
-                        setCustomDateTime(prev => ({ ...prev, time: formattedTime }));
-                      }
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="HH:MM"
-                    pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
-                    title="Gebruik 24-uurs notatie (HH:MM)"
-                    maxLength={5}
-                  />
-                </div>
-              </div>
-            </div>
+            <DateTimeFields
+              date={customDateTime.date}
+              time={customDateTime.time}
+              onDateChange={(date) => handleDateTimeChange('date', date)}
+              onTimeChange={(time) => handleDateTimeChange('time', time)}
+            />
 
             {/* Form fields */}
             <div className="space-y-4">
               {typeConfig.fields.map((field) => (
-                <div key={field.id}>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {field.label}
-                    {field.required && <span className="text-red-500 ml-1">*</span>}
-                  </label>
-                  {renderField(field)}
-                </div>
+                <FormField
+                  key={field.id}
+                  field={field}
+                  value={formData[field.id] || ''}
+                  onChange={(value) => handleFieldChange(field.id, value)}
+                />
               ))}
             </div>
 
