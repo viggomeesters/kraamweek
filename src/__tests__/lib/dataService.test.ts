@@ -510,7 +510,7 @@ describe('DataService', () => {
     it('should handle missing localStorage gracefully in server environment', () => {
       // Mock server environment
       const originalWindow = global.window;
-      delete (global as any).window;
+      delete (global as unknown as { window: Window }).window;
       
       expect(() => {
         const data = DataService.loadData();

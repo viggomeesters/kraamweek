@@ -8,17 +8,6 @@ import {
 describe('timeFormatValidator', () => {
   describe('containsAmPm', () => {
     it('should detect various AM/PM formats', () => {
-      const testCases = [
-        'Time is 2:30 PM',
-        'Meeting at 9:00 AM',
-        'Deadline: 11:59 pm',
-        'Start at 8:00am', // This won't match due to word boundary requirement
-        'End at 5:30 p.m.',
-        'Begin at 10:00 A.M.',
-        'Close at 6:00 P.M.',
-        'Open 9:00 a.m.',
-      ];
-
       // Test individual cases that actually match the word boundary regex
       expect(containsAmPm('Time is 2:30 PM')).toBe(true);
       expect(containsAmPm('Meeting at 9:00 AM')).toBe(true);
