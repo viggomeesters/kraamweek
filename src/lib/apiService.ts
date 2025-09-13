@@ -116,14 +116,22 @@ export class ApiService {
   }
 
   // Baby Records
-  static async getBabyRecords(): Promise<BabyRecord[]> {
+  static async getBabyRecords(userId?: string): Promise<BabyRecord[]> {
     if (!isSupabaseConfigured()) {
       throw new Error('Database not configured');
     }
-    const { data, error } = await supabase
+    
+    let query = supabase
       .from('baby_records')
       .select('*')
       .order('timestamp', { ascending: false });
+
+    // Filter by user ID if provided
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return data?.map(this.transformBabyRecord) || [];
@@ -157,11 +165,18 @@ export class ApiService {
   }
 
   // Mother Records
-  static async getMotherRecords(): Promise<MotherRecord[]> {
-    const { data, error } = await supabase
+  static async getMotherRecords(userId?: string): Promise<MotherRecord[]> {
+    let query = supabase
       .from('mother_records')
       .select('*')
       .order('timestamp', { ascending: false });
+
+    // Filter by user ID if provided
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return data?.map(this.transformMotherRecord) || [];
@@ -369,10 +384,10 @@ export class ApiService {
   }
 
   // Load all data (compatible with existing interface)
-  static async loadData(): Promise<AppData> {
+  static async loadData(userId?: string): Promise<AppData> {
     const [babyRecords, motherRecords, tasks, alerts, familyObservations, babyProfile] = await Promise.all([
-      this.getBabyRecords(),
-      this.getMotherRecords(),
+      this.getBabyRecords(userId),
+      this.getMotherRecords(userId),
       this.getTasks(),
       this.getAlerts(),
       this.getFamilyObservations(),

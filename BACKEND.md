@@ -55,6 +55,7 @@ The backend has been implemented using:
 ```sql
 CREATE TABLE baby_records (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   timestamp TIMESTAMPTZ NOT NULL,
   type TEXT NOT NULL CHECK (type IN ('sleep', 'feeding', 'temperature', 'diaper', 'jaundice', 'note', 'pumping', 'weight')),
   value TEXT,
@@ -71,12 +72,29 @@ CREATE TABLE baby_records (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Add RLS policies for baby_records table
+ALTER TABLE baby_records ENABLE ROW LEVEL SECURITY;
+
+-- Users can only see and manage their own baby records
+CREATE POLICY "Users can view own baby records" ON baby_records
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own baby records" ON baby_records
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own baby records" ON baby_records
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own baby records" ON baby_records
+  FOR DELETE USING (auth.uid() = user_id);
 ```
 
 #### Mother Records Table
 ```sql
 CREATE TABLE mother_records (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   timestamp TIMESTAMPTZ NOT NULL,
   type TEXT NOT NULL CHECK (type IN ('temperature', 'blood_pressure', 'mood', 'pain', 'feeding_session', 'note')),
   value TEXT,
@@ -89,12 +107,29 @@ CREATE TABLE mother_records (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Add RLS policies for mother_records table
+ALTER TABLE mother_records ENABLE ROW LEVEL SECURITY;
+
+-- Users can only see and manage their own mother records
+CREATE POLICY "Users can view own mother records" ON mother_records
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own mother records" ON mother_records
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own mother records" ON mother_records
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own mother records" ON mother_records
+  FOR DELETE USING (auth.uid() = user_id);
 ```
 
 #### Baby Profiles Table
 ```sql
 CREATE TABLE baby_profiles (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   voornaam TEXT NOT NULL,
   achternaam TEXT NOT NULL,
   roepnaam TEXT,
@@ -115,6 +150,34 @@ CREATE TABLE baby_profiles (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+```
+
+#### Users Table
+```sql
+CREATE TABLE users (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  naam TEXT NOT NULL,
+  rol TEXT NOT NULL CHECK (rol IN ('ouders', 'kraamhulp')),
+  profile_completed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  last_login_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Add RLS policies for users table
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+-- Users can only see and update their own profile
+CREATE POLICY "Users can view own profile" ON users
+  FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile" ON users
+  FOR UPDATE USING (auth.uid() = id);
+
+-- Allow users to insert their own profile
+CREATE POLICY "Users can insert own profile" ON users
+  FOR INSERT WITH CHECK (auth.uid() = id);
 ```
 
 #### Tasks Table

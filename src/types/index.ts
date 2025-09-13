@@ -100,6 +100,7 @@ export interface AppData {
   tasks: Task[];
   alerts: Alert[];
   babyProfile?: BabyProfile; // Single baby profile (future: support multiple)
+  userId?: string; // Associated user ID for multi-user support
   // Future extensibility placeholders:
   notifications?: Notification[]; // For future notification system
   settings?: AppSettings; // For user preferences
@@ -126,6 +127,35 @@ export interface NotificationAction {
   label: string;
   action: 'dismiss' | 'snooze' | 'mark_done' | 'view_record';
   data?: Record<string, unknown>;
+}
+
+// Authentication interfaces
+export interface User {
+  id: string;
+  email: string;
+  naam: string;
+  rol: 'ouders' | 'kraamhulp';
+  createdAt: string;
+  lastLoginAt?: string;
+  profileCompleted: boolean;
+}
+
+export interface AuthState {
+  user: User | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterData {
+  email: string;
+  password: string;
+  naam: string;
+  rol: 'ouders' | 'kraamhulp';
 }
 
 // Future app settings interface
