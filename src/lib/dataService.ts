@@ -21,10 +21,47 @@ export class DataService {
     
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : getInitialData();
+      const data = stored ? JSON.parse(stored) : getInitialData();
+      
+      // Migrate birth weight from profile to logging entry if needed
+      this.migrateBirthWeightToLogging(data);
+      
+      return data;
     } catch (error) {
       console.error('Failed to load data:', error);
       return getInitialData();
+    }
+  }
+
+  // Migration: Convert birth weight from profile to logging entry
+  private static migrateBirthWeightToLogging(data: AppData): void {
+    if (!data.babyProfile?.geboortgewicht || !data.babyProfile?.geboortedatum) {
+      return;
+    }
+    
+    // Check if birth weight logging entry already exists
+    const birthWeightExists = data.babyRecords.some(record => 
+      record.type === 'weight' && 
+      record.timestamp.startsWith(data.babyProfile!.geboortedatum) &&
+      record.weight === data.babyProfile!.geboortgewicht
+    );
+    
+    if (!birthWeightExists) {
+      // Create birth weight logging entry at birth time
+      const birthDateTime = data.babyProfile.geboortijd 
+        ? `${data.babyProfile.geboortedatum}T${data.babyProfile.geboortijd}:00`
+        : `${data.babyProfile.geboortedatum}T00:00:00`;
+        
+      const birthWeightRecord: BabyRecord = {
+        id: `birth-weight-${data.babyProfile.geboortedatum}`,
+        timestamp: new Date(birthDateTime).toISOString(),
+        type: 'weight',
+        weight: data.babyProfile.geboortgewicht,
+        notes: 'Geboortegewicht',
+      };
+      
+      data.babyRecords.push(birthWeightRecord);
+      this.saveData(data);
     }
   }
 
@@ -274,6 +311,32 @@ export class DataService {
       updatedAt: now,
     };
     
+    // If birth weight is provided and we don't already have a birth weight logging entry, create one
+    if (profile.geboortgewicht && profile.geboortedatum) {
+      const birthWeightExists = data.babyRecords.some(record => 
+        record.type === 'weight' && 
+        record.timestamp.startsWith(profile.geboortedatum) &&
+        record.weight === profile.geboortgewicht
+      );
+      
+      if (!birthWeightExists) {
+        // Create birth weight logging entry at birth time
+        const birthDateTime = profile.geboortijd 
+          ? `${profile.geboortedatum}T${profile.geboortijd}:00`
+          : `${profile.geboortedatum}T00:00:00`;
+          
+        const birthWeightRecord: BabyRecord = {
+          id: `birth-weight-${Date.now()}`,
+          timestamp: new Date(birthDateTime).toISOString(),
+          type: 'weight',
+          weight: profile.geboortgewicht,
+          notes: 'Geboortegewicht',
+        };
+        
+        data.babyRecords.push(birthWeightRecord);
+      }
+    }
+    
     data.babyProfile = newProfile;
     this.saveData(data);
     
@@ -386,30 +449,9 @@ export class DataService {
   }
 
   static getDailyWeightsWithBirthWeight(startDate: string, endDate: string): Array<{date: string, weight: number}> {
-    const profile = this.getBabyProfile();
-    const weights = this.getDailyWeights(startDate, endDate);
-    
-    // If we have a birth weight, include it as the first data point if within range
-    if (profile?.geboortgewicht && profile?.geboortedatum) {
-      const birthDate = profile.geboortedatum.split('T')[0];
-      const start = new Date(startDate);
-      const birth = new Date(birthDate);
-      
-      // Include birth weight if birth date is within or before our range
-      if (birth <= start || (birth >= new Date(startDate) && birth <= new Date(endDate))) {
-        const result = [...weights];
-        
-        // Add birth weight if not already present
-        const birthWeightExists = result.some(w => w.date === birthDate);
-        if (!birthWeightExists) {
-          result.unshift({ date: birthDate, weight: profile.geboortgewicht });
-        }
-        
-        return result.sort((a, b) => a.date.localeCompare(b.date));
-      }
-    }
-    
-    return weights;
+    // Now that birth weight is automatically converted to logging entries,
+    // this function simply returns the regular daily weights which includes birth weight
+    return this.getDailyWeights(startDate, endDate);
   }
 
   static getDailyTemperatures(startDate: string, endDate: string, type: 'baby' | 'mother'): Array<{date: string, temperature: number}> {
