@@ -242,13 +242,29 @@ export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord }: L
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">Tijd</label>
                   <input
-                    type="time"
+                    type="text"
                     value={customDateTime.time}
-                    onChange={(e) => setCustomDateTime(prev => ({ ...prev, time: e.target.value }))}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Allow partial input while typing, but validate format
+                      if (value === '' || /^([0-1]?[0-9]|2[0-3])(:[0-5][0-9])?$/.test(value)) {
+                        setCustomDateTime(prev => ({ ...prev, time: value }));
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      // Format to HH:MM on blur if valid
+                      if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
+                        const [hours, minutes] = value.split(':');
+                        const formattedTime = `${hours.padStart(2, '0')}:${minutes}`;
+                        setCustomDateTime(prev => ({ ...prev, time: formattedTime }));
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    step="60"
-                    pattern="[0-9]{2}:[0-9]{2}"
+                    placeholder="HH:MM"
+                    pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
                     title="Gebruik 24-uurs notatie (HH:MM)"
+                    maxLength={5}
                   />
                 </div>
               </div>
