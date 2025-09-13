@@ -7,11 +7,18 @@ import BottomNav from '@/components/BottomNav';
 import Profile from '@/components/Profile';
 import Overview from '@/components/Overview';
 import LoggingGallery from '@/components/LoggingGallery';
+import { AnalyticsSection } from '@/components/Analytics';
+import Toast from '@/components/Toast';
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'profile' | 'overview' | 'logging'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'overview' | 'logging' | 'analytics'>('profile');
   const [data, setData] = useState<AppData>(DataService.loadData());
   const [isLoading, setIsLoading] = useState(true);
+  const [toast, setToast] = useState<{ isVisible: boolean; message: string; type?: 'success' | 'error' | 'info' }>({
+    isVisible: false,
+    message: '',
+    type: 'success'
+  });
 
   useEffect(() => {
     // Load initial data
@@ -21,6 +28,14 @@ export default function Home() {
 
   const refreshData = () => {
     setData(DataService.loadData());
+  };
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ isVisible: true, message, type });
+  };
+
+  const hideToast = () => {
+    setToast(prev => ({ ...prev, isVisible: false }));
   };
 
   const handleAddBabyRecord = (record: Omit<BabyRecord, 'id'>) => {
@@ -59,7 +74,20 @@ export default function Home() {
           <LoggingGallery
             onAddBabyRecord={handleAddBabyRecord}
             onAddMotherRecord={handleAddMotherRecord}
+            onSuccess={showToast}
           />
+        );
+      case 'analytics':
+        return (
+          <div className="p-4 pb-24">
+            <div className="max-w-md mx-auto">
+              <h1 className="text-2xl font-bold text-gray-900 mb-6">Analytics & Trends</h1>
+              <AnalyticsSection 
+                babyRecords={data.babyRecords} 
+                motherRecords={data.motherRecords} 
+              />
+            </div>
+          </div>
         );
       default:
         return <Profile profile={data.babyProfile} onProfileUpdate={refreshData} />;
@@ -70,6 +98,12 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50">
       {renderActiveTab()}
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <Toast 
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+      />
     </div>
   );
 }

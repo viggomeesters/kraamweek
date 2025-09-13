@@ -109,10 +109,10 @@ export default function Overview({ data }: OverviewProps) {
             <button
               key={filter.id}
               onClick={() => setSelectedFilter(filter.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-2 px-4 py-3 rounded-full whitespace-nowrap transition-colors min-h-[3rem] touch-manipulation ${
                 selectedFilter === filter.id
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
               }`}
             >
               <span>{filter.icon}</span>
