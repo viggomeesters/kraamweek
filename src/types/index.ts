@@ -23,6 +23,7 @@ export interface MotherRecord {
   type: 'temperature' | 'blood_pressure' | 'mood' | 'pain' | 'feeding_session' | 'note';
   value?: string | number;
   notes?: string;
+  duration?: number; // for feeding_session in minutes
   bloodPressure?: {
     systolic: number;
     diastolic: number;
