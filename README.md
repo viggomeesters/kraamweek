@@ -1,5 +1,29 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+# Kraamweek App - Postpartum Care Tracking
+
+A Dutch postpartum care tracking application for monitoring baby and mother health during the "kraamweek" period.
+
+## Time Format Requirements
+
+**⚠️ IMPORTANT: This application enforces 24-hour time notation (HH:MM) throughout the entire interface.**
+
+- All time displays use 24-hour format (e.g., "14:30" instead of "2:30 PM")
+- Time input fields are configured to accept only 24-hour format
+- No AM/PM indicators should appear anywhere in the UI
+- All timestamps in data storage use ISO format with 24-hour time
+- Date/time utilities in `src/lib/dateUtils.ts` ensure consistent 24-hour formatting
+
+### Validation
+
+To check for AM/PM violations in the UI during development:
+
+```javascript
+// Run in browser console
+import { testAmPmInUI } from '@/lib/amPmDetector';
+testAmPmInUI();
+```
+
 ## Getting Started
 
 First, run the development server:

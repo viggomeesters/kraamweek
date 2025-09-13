@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { BabyProfile } from '@/types';
 import { DataService } from '@/lib/dataService';
+import { formatTime24 } from '@/lib/dateUtils';
 
 interface ProfileProps {
   profile?: BabyProfile;
@@ -108,7 +109,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
               {profile.geboortijd && (
                 <div>
                   <span className="font-medium text-gray-600">Geboortijd:</span>
-                  <p className="text-gray-900">{profile.geboortijd}</p>
+                  <p className="text-gray-900">{formatTime24(`1970-01-01T${profile.geboortijd}:00`)}</p>
                 </div>
               )}
               {profile.geboortgewicht && (
@@ -229,6 +230,9 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
                 value={formData.geboortijd || ''}
                 onChange={(e) => setFormData({ ...formData, geboortijd: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                step="60"
+                pattern="[0-9]{2}:[0-9]{2}"
+                title="Gebruik 24-uurs notatie (HH:MM)"
               />
             </div>
 

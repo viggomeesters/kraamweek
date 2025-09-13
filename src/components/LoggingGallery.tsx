@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { getBabyLoggingTypes, getMotherLoggingTypes, LoggingTypeConfig, LoggingField } from '@/config/loggingTypes';
 import { BabyRecord, MotherRecord } from '@/types';
+import { formatTime24 } from '@/lib/dateUtils';
 
 interface LoggingGalleryProps {
   onAddBabyRecord: (record: Omit<BabyRecord, 'id'>) => void;
@@ -14,7 +15,7 @@ export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord }: L
   const [formData, setFormData] = useState<Record<string, string | number | boolean>>({});
   const [customDateTime, setCustomDateTime] = useState({
     date: new Date().toISOString().split('T')[0],
-    time: new Date().toTimeString().slice(0, 5),
+    time: formatTime24(new Date()),
   });
 
   const babyTypes = getBabyLoggingTypes();
@@ -25,7 +26,7 @@ export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord }: L
     setFormData({});
     setCustomDateTime({
       date: new Date().toISOString().split('T')[0],
-      time: new Date().toTimeString().slice(0, 5),
+      time: formatTime24(new Date()),
     });
   };
 
@@ -245,6 +246,9 @@ export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord }: L
                     value={customDateTime.time}
                     onChange={(e) => setCustomDateTime(prev => ({ ...prev, time: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    step="60"
+                    pattern="[0-9]{2}:[0-9]{2}"
+                    title="Gebruik 24-uurs notatie (HH:MM)"
                   />
                 </div>
               </div>
