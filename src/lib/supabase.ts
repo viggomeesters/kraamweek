@@ -1,18 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// Safe defaults for development - API will work without database
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://demo.supabase.co';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'demo-key';
 
-// Create a client only if environment variables are available
-let supabase: ReturnType<typeof createClient> | null = null;
-
-if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-}
-
-// Export a safe supabase client that throws meaningful errors
-export { supabase };
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const isSupabaseConfigured = (): boolean => {
-  return !!(supabaseUrl && supabaseKey);
+  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 };

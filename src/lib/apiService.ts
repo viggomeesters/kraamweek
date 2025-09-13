@@ -1,13 +1,7 @@
-import { supabase } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 import { BabyRecord, MotherRecord, Task, Alert, BabyProfile, FamilyObservation, AppData } from '@/types';
 
 export class ApiService {
-  private static checkSupabase() {
-    if (!supabase) {
-      throw new Error('Supabase is not configured. Please check your environment variables.');
-    }
-    return supabase;
-  }
   // Helper to transform database records to frontend types
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private static transformBabyRecord(dbRecord: any): BabyRecord {
@@ -123,8 +117,10 @@ export class ApiService {
 
   // Baby Records
   static async getBabyRecords(): Promise<BabyRecord[]> {
-    const client = this.checkSupabase();
-    const { data, error } = await client
+    if (!isSupabaseConfigured()) {
+      throw new Error('Database not configured');
+    }
+    const { data, error } = await supabase
       .from('baby_records')
       .select('*')
       .order('timestamp', { ascending: false });
