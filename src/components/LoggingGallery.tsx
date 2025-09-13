@@ -285,7 +285,7 @@ export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord }: L
   return (
     <div className="p-4 pb-24">
       <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Registreren</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Logging</h1>
         
         {/* Baby section */}
         <div className="mb-8">
@@ -298,10 +298,10 @@ export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord }: L
               <button
                 key={type.id}
                 onClick={() => handleTypeSelect(type)}
-                className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm border hover:shadow-md hover:border-indigo-300 transition-all duration-200"
+                className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm border hover:shadow-md hover:border-indigo-300 transition-all duration-200 min-h-[5rem] active:scale-95 active:bg-indigo-50"
               >
                 <span className="text-2xl mb-2">{type.icon}</span>
-                <span className="text-sm font-medium text-gray-700 text-center">
+                <span className="text-sm font-medium text-gray-700 text-center leading-tight">
                   {type.label}
                 </span>
               </button>
@@ -320,10 +320,10 @@ export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord }: L
               <button
                 key={type.id}
                 onClick={() => handleTypeSelect(type)}
-                className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm border hover:shadow-md hover:border-indigo-300 transition-all duration-200"
+                className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm border hover:shadow-md hover:border-indigo-300 transition-all duration-200 min-h-[5rem] active:scale-95 active:bg-indigo-50"
               >
                 <span className="text-2xl mb-2">{type.icon}</span>
-                <span className="text-sm font-medium text-gray-700 text-center">
+                <span className="text-sm font-medium text-gray-700 text-center leading-tight">
                   {type.label}
                 </span>
               </button>
