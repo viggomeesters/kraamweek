@@ -1,8 +1,8 @@
 'use client';
 
 interface BottomNavProps {
-  activeTab: 'profile' | 'overview' | 'logging' | 'analytics';
-  onTabChange: (tab: 'profile' | 'overview' | 'logging' | 'analytics') => void;
+  activeTab: 'profile' | 'overview' | 'logging' | 'analytics' | 'user';
+  onTabChange: (tab: 'profile' | 'overview' | 'logging' | 'analytics' | 'user') => void;
 }
 
 export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
@@ -11,6 +11,7 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
     { id: 'overview' as const, label: 'Overzicht', icon: '📋' },
     { id: 'logging' as const, label: 'Logging', icon: '➕' },
     { id: 'analytics' as const, label: 'Analytics', icon: '📊' },
+    { id: 'user' as const, label: 'Account', icon: '👤' },
   ];
 
   return (
@@ -26,7 +27,7 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 active:bg-gray-100'
             }`}
           >
-            <span className="text-2xl">{item.icon}</span>
+            <span className="text-xl">{item.icon}</span>
             <span className="text-xs font-medium leading-tight">{item.label}</span>
           </button>
         ))}
