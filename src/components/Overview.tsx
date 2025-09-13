@@ -263,7 +263,7 @@ function getMotherRecordDetails(record: MotherRecord): string {
     case 'pain':
       return `Niveau ${record.painLevel}/10${record.notes ? ` - ${record.notes}` : ''}`;
     case 'feeding_session':
-      return record.notes || 'Voedingssessie';
+      return `${record.duration} minuten${record.notes ? ` - ${record.notes}` : ''}`;
     case 'note':
       return record.notes || 'Notitie';
     default:

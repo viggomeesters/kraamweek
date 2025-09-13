@@ -254,7 +254,7 @@ export const LOGGING_TYPES: LoggingTypeConfig[] = [
 
   // Mother logging types
   {
-    id: 'mother_temperature',
+    id: 'temperature',
     label: 'Temperatuur',
     icon: '🌡️',
     category: 'moeder',
@@ -372,7 +372,7 @@ export const LOGGING_TYPES: LoggingTypeConfig[] = [
     ]
   },
   {
-    id: 'mother_note',
+    id: 'note',
     label: 'Notitie',
     icon: '📝',
     category: 'moeder',
@@ -383,6 +383,27 @@ export const LOGGING_TYPES: LoggingTypeConfig[] = [
         label: 'Notitie',
         placeholder: 'Typ hier uw notitie...',
         required: true
+      }
+    ]
+  },
+  {
+    id: 'feeding_session',
+    label: 'Voedingssessie',
+    icon: '🤱',
+    category: 'moeder',
+    fields: [
+      {
+        id: 'duration',
+        type: 'duration',
+        label: 'Duur',
+        required: true,
+        placeholder: 'Uren en minuten'
+      },
+      {
+        id: 'notes',
+        type: 'text',
+        label: 'Notities',
+        placeholder: 'Eventuele opmerkingen...'
       }
     ]
   }

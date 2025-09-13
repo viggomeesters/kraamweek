@@ -55,36 +55,15 @@ export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord }: L
       };
       onAddBabyRecord(record);
     } else {
-      // Handle mother record types
-      let recordType: MotherRecord['type'];
-      switch (typeConfig.id) {
-        case 'mother_temperature':
-          recordType = 'temperature';
-          break;
-        case 'blood_pressure':
-          recordType = 'blood_pressure';
-          break;
-        case 'mood':
-          recordType = 'mood';
-          break;
-        case 'pain':
-          recordType = 'pain';
-          break;
-        case 'mother_note':
-          recordType = 'note';
-          break;
-        default:
-          recordType = 'note';
-      }
-
+      // Handle mother record types - now using direct mapping
       const record: Omit<MotherRecord, 'id'> = {
         timestamp,
-        type: recordType,
+        type: typeConfig.id as MotherRecord['type'],
         ...formData,
       };
 
       // Handle blood pressure specially
-      if (recordType === 'blood_pressure' && formData.systolic && formData.diastolic) {
+      if (typeConfig.id === 'blood_pressure' && formData.systolic && formData.diastolic) {
         record.bloodPressure = {
           systolic: Number(formData.systolic),
           diastolic: Number(formData.diastolic),
