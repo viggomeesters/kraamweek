@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { BabyProfile } from '@/types';
 import { DataService } from '@/lib/dataService';
+import { formatTime24 } from '@/lib/dateUtils';
 
 interface ProfileProps {
   profile?: BabyProfile;
@@ -108,7 +109,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
               {profile.geboortijd && (
                 <div>
                   <span className="font-medium text-gray-600">Geboortijd:</span>
-                  <p className="text-gray-900">{profile.geboortijd}</p>
+                  <p className="text-gray-900">{formatTime24(`1970-01-01T${profile.geboortijd}:00`)}</p>
                 </div>
               )}
               {profile.geboortgewicht && (
@@ -225,10 +226,29 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
                 Geboortijd
               </label>
               <input
-                type="time"
+                type="text"
                 value={formData.geboortijd || ''}
-                onChange={(e) => setFormData({ ...formData, geboortijd: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Allow partial input while typing, but validate format
+                  if (value === '' || /^([0-1]?[0-9]|2[0-3])(:[0-5][0-9])?$/.test(value)) {
+                    setFormData({ ...formData, geboortijd: value });
+                  }
+                }}
+                onBlur={(e) => {
+                  const value = e.target.value;
+                  // Format to HH:MM on blur if valid
+                  if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
+                    const [hours, minutes] = value.split(':');
+                    const formattedTime = `${hours.padStart(2, '0')}:${minutes}`;
+                    setFormData({ ...formData, geboortijd: formattedTime });
+                  }
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="HH:MM"
+                pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
+                title="Gebruik 24-uurs notatie (HH:MM)"
+                maxLength={5}
               />
             </div>
 
