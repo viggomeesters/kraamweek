@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { withOptionalAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
+import { handleOptions } from '@/lib/securityMiddleware';
+import { validateBabyRecord } from '@/lib/validation';
+
+export async function OPTIONS() {
+  return handleOptions();
+}
 
 export async function GET(request: NextRequest) {
   return withOptionalAuth(request, async (req: AuthenticatedRequest) => {
@@ -43,7 +49,21 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   return withOptionalAuth(request, async (req: AuthenticatedRequest) => {
     try {
-      const recordData = await req.json();
+      const rawData = await req.json();
+      
+      // Validate and sanitize baby record data
+      const validation = validateBabyRecord(rawData);
+      if (!validation.isValid) {
+        return NextResponse.json(
+          { 
+            error: 'Validation failed', 
+            details: validation.errors 
+          },
+          { status: 400 }
+        );
+      }
+      
+      const recordData = validation.sanitizedValue as Record<string, unknown>;
       
       if (!isSupabaseConfigured()) {
         // Return demo response when database is not configured
@@ -67,7 +87,7 @@ export async function POST(request: NextRequest) {
       const recordWithUser = {
         ...recordData,
         user_id: req.userId
-      };
+      } as unknown as Omit<import('@/types').BabyRecord, 'id'>;
 
       const { ApiService } = await import('@/lib/apiService');
       const record = await ApiService.addBabyRecord(recordWithUser);

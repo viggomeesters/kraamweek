@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { LoginCredentials, RegisterData } from '@/types';
+import { validateEmail, validatePassword, validateName, validateRole } from '@/lib/validation';
 
 interface AuthFormProps {
   onLogin: (credentials: LoginCredentials) => Promise<{ success: boolean; error?: string }>;
@@ -18,14 +19,74 @@ export default function AuthForm({ onLogin, onRegister, isLoading }: AuthFormPro
     rol: 'ouders' as 'ouders' | 'kraamhulp',
   });
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{[key: string]: string[]}>({});
+
+  const validateField = (field: string, value: string) => {
+    let validation;
+    
+    switch (field) {
+      case 'email':
+        validation = validateEmail(value);
+        break;
+      case 'password':
+        validation = validatePassword(value);
+        break;
+      case 'naam':
+        validation = validateName(value);
+        break;
+      case 'rol':
+        validation = validateRole(value);
+        break;
+      default:
+        return;
+    }
+    
+    setFieldErrors(prev => ({
+      ...prev,
+      [field]: validation.isValid ? [] : validation.errors
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
+
+    // Validate all fields
+    const emailValidation = validateEmail(formData.email);
+    const passwordValidation = validatePassword(formData.password);
+    
+    const errors: {[key: string]: string[]} = {};
+    
+    if (!emailValidation.isValid) {
+      errors.email = emailValidation.errors;
+    }
+    
+    if (!passwordValidation.isValid) {
+      errors.password = passwordValidation.errors;
+    }
+
+    if (!isLoginMode) {
+      const nameValidation = validateName(formData.naam);
+      const roleValidation = validateRole(formData.rol);
+      
+      if (!nameValidation.isValid) {
+        errors.naam = nameValidation.errors;
+      }
+      
+      if (!roleValidation.isValid) {
+        errors.rol = roleValidation.errors;
+      }
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
 
     if (isLoginMode) {
       const result = await onLogin({
-        email: formData.email,
+        email: (emailValidation.sanitizedValue as string) || formData.email,
         password: formData.password,
       });
       
@@ -39,7 +100,7 @@ export default function AuthForm({ onLogin, onRegister, isLoading }: AuthFormPro
       }
 
       const result = await onRegister({
-        email: formData.email,
+        email: (emailValidation.sanitizedValue as string) || formData.email,
         password: formData.password,
         naam: formData.naam.trim(),
         rol: formData.rol,
@@ -53,7 +114,20 @@ export default function AuthForm({ onLogin, onRegister, isLoading }: AuthFormPro
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (error) setError(null); // Clear error when user starts typing
+    if (error) setError(null); // Clear general error when user starts typing
+    
+    // Clear field-specific errors when user starts typing
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => ({ ...prev, [field]: [] }));
+    }
+    
+    // Validate on blur (after a short delay)
+    setTimeout(() => validateField(field, value), 300);
+  };
+
+  const getFieldError = (field: string): string | null => {
+    const errors = fieldErrors[field];
+    return errors && errors.length > 0 ? errors[0] : null;
   };
 
   return (
@@ -98,9 +172,15 @@ export default function AuthForm({ onLogin, onRegister, isLoading }: AuthFormPro
                   required={!isLoginMode}
                   value={formData.naam}
                   onChange={(e) => handleInputChange('naam', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  onBlur={(e) => validateField('naam', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${
+                    getFieldError('naam') ? 'border-red-300' : 'border-gray-300'
+                  }`}
                   placeholder="Uw volledige naam"
                 />
+                {getFieldError('naam') && (
+                  <p className="mt-1 text-sm text-red-600">{getFieldError('naam')}</p>
+                )}
               </div>
             )}
 
@@ -116,9 +196,15 @@ export default function AuthForm({ onLogin, onRegister, isLoading }: AuthFormPro
                 required
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                onBlur={(e) => validateField('email', e.target.value)}
+                className={`w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${
+                  getFieldError('email') ? 'border-red-300' : 'border-gray-300'
+                }`}
                 placeholder="uw@email.nl"
               />
+              {getFieldError('email') && (
+                <p className="mt-1 text-sm text-red-600">{getFieldError('email')}</p>
+              )}
             </div>
 
             <div>
@@ -133,10 +219,16 @@ export default function AuthForm({ onLogin, onRegister, isLoading }: AuthFormPro
                 required
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder={isLoginMode ? 'Uw wachtwoord' : 'Minimaal 6 karakters'}
-                minLength={isLoginMode ? undefined : 6}
+                onBlur={(e) => validateField('password', e.target.value)}
+                className={`w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${
+                  getFieldError('password') ? 'border-red-300' : 'border-gray-300'
+                }`}
+                placeholder={isLoginMode ? 'Uw wachtwoord' : 'Minimaal 8 karakters, letter en cijfer'}
+                minLength={isLoginMode ? undefined : 8}
               />
+              {getFieldError('password') && (
+                <p className="mt-1 text-sm text-red-600">{getFieldError('password')}</p>
+              )}
             </div>
 
             {!isLoginMode && (
