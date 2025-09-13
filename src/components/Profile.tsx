@@ -314,14 +314,14 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
           <div className="flex gap-3 mt-6">
             <button
               onClick={handleSave}
-              className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+              className="flex-1 bg-indigo-600 text-white py-4 rounded-lg hover:bg-indigo-700 transition-colors font-medium min-h-[3.5rem] touch-manipulation"
             >
               Opslaan
             </button>
             {profile && (
               <button
                 onClick={handleCancel}
-                className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+                className="flex-1 bg-gray-300 text-gray-700 py-4 rounded-lg hover:bg-gray-400 transition-colors font-medium min-h-[3.5rem] touch-manipulation"
               >
                 Annuleren
               </button>

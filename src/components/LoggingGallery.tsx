@@ -8,9 +8,10 @@ import { formatTime24 } from '@/lib/dateUtils';
 interface LoggingGalleryProps {
   onAddBabyRecord: (record: Omit<BabyRecord, 'id'>) => void;
   onAddMotherRecord: (record: Omit<MotherRecord, 'id'>) => void;
+  onSuccess?: (message: string) => void;
 }
 
-export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord }: LoggingGalleryProps) {
+export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord, onSuccess }: LoggingGalleryProps) {
   const [activeForm, setActiveForm] = useState<string | null>(null);
   const [formData, setFormData] = useState<Record<string, string | number | boolean>>({});
   const [customDateTime, setCustomDateTime] = useState({
@@ -54,6 +55,7 @@ export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord }: L
         ...formData,
       };
       onAddBabyRecord(record);
+      onSuccess?.(`${typeConfig.label} succesvol geregistreerd!`);
     } else {
       // Handle mother record types - now using direct mapping
       const record: Omit<MotherRecord, 'id'> = {
@@ -71,6 +73,7 @@ export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord }: L
       }
 
       onAddMotherRecord(record);
+      onSuccess?.(`${typeConfig.label} succesvol geregistreerd!`);
     }
 
     setActiveForm(null);
@@ -265,13 +268,13 @@ export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord }: L
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => handleSubmit(typeConfig)}
-                className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                className="flex-1 bg-indigo-600 text-white py-4 rounded-lg hover:bg-indigo-700 transition-colors font-medium text-base min-h-[3.5rem] touch-manipulation"
               >
                 Opslaan
               </button>
               <button
                 onClick={() => setActiveForm(null)}
-                className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+                className="flex-1 bg-gray-300 text-gray-700 py-4 rounded-lg hover:bg-gray-400 transition-colors font-medium text-base min-h-[3.5rem] touch-manipulation"
               >
                 Annuleren
               </button>
@@ -298,7 +301,7 @@ export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord }: L
               <button
                 key={type.id}
                 onClick={() => handleTypeSelect(type)}
-                className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm border hover:shadow-md hover:border-indigo-300 transition-all duration-200 min-h-[5rem] active:scale-95 active:bg-indigo-50"
+                className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm border hover:shadow-md hover:border-indigo-300 transition-all duration-200 min-h-[6rem] active:scale-95 active:bg-indigo-50 touch-manipulation"
               >
                 <span className="text-2xl mb-2">{type.icon}</span>
                 <span className="text-sm font-medium text-gray-700 text-center leading-tight">
@@ -320,7 +323,7 @@ export default function LoggingGallery({ onAddBabyRecord, onAddMotherRecord }: L
               <button
                 key={type.id}
                 onClick={() => handleTypeSelect(type)}
-                className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm border hover:shadow-md hover:border-indigo-300 transition-all duration-200 min-h-[5rem] active:scale-95 active:bg-indigo-50"
+                className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm border hover:shadow-md hover:border-indigo-300 transition-all duration-200 min-h-[6rem] active:scale-95 active:bg-indigo-50 touch-manipulation"
               >
                 <span className="text-2xl mb-2">{type.icon}</span>
                 <span className="text-sm font-medium text-gray-700 text-center leading-tight">
