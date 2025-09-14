@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { User } from '@/types';
 import { Button, Input, Select, Card, Alert } from '@/components/ui';
+import Avatar from '@/components/Avatar';
 
 interface UserProfileProps {
   user: User;
   onLogout: () => Promise<{ success: boolean; error?: string }>;
-  onProfileUpdate: (updates: Partial<Pick<User, 'naam' | 'rol'>>) => Promise<{ success: boolean; error?: string }>;
+  onProfileUpdate: (updates: Partial<Pick<User, 'naam' | 'rol' | 'avatar'>>) => Promise<{ success: boolean; error?: string }>;
   onShowFeedbackDashboard?: () => void;
 }
 
@@ -16,6 +17,7 @@ export default function UserProfile({ user, onLogout, onProfileUpdate, onShowFee
   const [formData, setFormData] = useState({
     naam: user.naam,
     rol: user.rol,
+    avatar: user.avatar,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -27,6 +29,7 @@ export default function UserProfile({ user, onLogout, onProfileUpdate, onShowFee
     const result = await onProfileUpdate({
       naam: formData.naam.trim(),
       rol: formData.rol,
+      avatar: formData.avatar,
     });
 
     if (result.success) {
@@ -43,6 +46,7 @@ export default function UserProfile({ user, onLogout, onProfileUpdate, onShowFee
     setFormData({
       naam: user.naam,
       rol: user.rol,
+      avatar: user.avatar,
     });
     setIsEditing(false);
     setMessage(null);
@@ -56,6 +60,10 @@ export default function UserProfile({ user, onLogout, onProfileUpdate, onShowFee
       setIsLoading(false);
     }
     // If successful, the auth context will handle the state change
+  };
+
+  const handleAvatarChange = (avatarData: string) => {
+    setFormData(prev => ({ ...prev, avatar: avatarData }));
   };
 
   return (
@@ -83,6 +91,21 @@ export default function UserProfile({ user, onLogout, onProfileUpdate, onShowFee
       )}
 
       <div className="space-y-4">
+        {/* Avatar Section */}
+        <div className="flex flex-col items-center space-y-3 pb-4 border-b border-gray-200">
+          <Avatar
+            src={isEditing ? formData.avatar : user.avatar}
+            name={isEditing ? formData.naam : user.naam}
+            size="xl"
+            editable={isEditing}
+            onAvatarChange={handleAvatarChange}
+          />
+          <div className="text-center">
+            <h3 className="font-medium text-gray-900">{isEditing ? formData.naam : user.naam}</h3>
+            <p className="text-sm text-gray-500">{isEditing ? formData.rol : user.rol === 'ouders' ? 'Ouder(s)' : 'Kraamhulp'}</p>
+          </div>
+        </div>
+
         <Input
           label="Naam"
           value={isEditing ? formData.naam : user.naam}

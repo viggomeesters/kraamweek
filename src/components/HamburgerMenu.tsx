@@ -8,6 +8,7 @@ interface HamburgerMenuProps {
   onHelpClick?: () => void;
   onFeedbackClick?: () => void;
   onAccountClick?: () => void;
+  onSettingsClick?: () => void;
   userRole?: string;
 }
 
@@ -17,6 +18,7 @@ export default function HamburgerMenu({
   onHelpClick, 
   onFeedbackClick, 
   onAccountClick,
+  onSettingsClick,
   userRole 
 }: HamburgerMenuProps) {
   // Close menu when clicking outside
@@ -91,7 +93,24 @@ export default function HamburgerMenu({
                     <span className="text-2xl">👤</span>
                     <div>
                       <div className="font-medium text-gray-900">Account</div>
-                      <div className="text-sm text-gray-500">Profiel en instellingen</div>
+                      <div className="text-sm text-gray-500">Profiel en gebruikersbeheer</div>
+                    </div>
+                  </button>
+                )}
+
+                {/* Settings */}
+                {onSettingsClick && (
+                  <button
+                    onClick={() => {
+                      onSettingsClick();
+                      onClose();
+                    }}
+                    className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200 text-left"
+                  >
+                    <span className="text-2xl">⚙️</span>
+                    <div>
+                      <div className="font-medium text-gray-900">Instellingen</div>
+                      <div className="text-sm text-gray-500">App configuratie en voorkeuren</div>
                     </div>
                   </button>
                 )}
