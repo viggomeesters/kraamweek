@@ -3,9 +3,10 @@
 interface BottomNavProps {
   activeTab: 'profile' | 'overview' | 'logging' | 'analytics' | 'user';
   onTabChange: (tab: 'profile' | 'overview' | 'logging' | 'analytics' | 'user') => void;
+  onHelpClick?: () => void;
 }
 
-export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
+export default function BottomNav({ activeTab, onTabChange, onHelpClick }: BottomNavProps) {
   const navItems = [
     { id: 'profile' as const, label: 'Profiel', icon: '👶' },
     { id: 'overview' as const, label: 'Overzicht', icon: '📋' },
@@ -31,6 +32,18 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
             <span className="text-xs font-medium leading-tight">{item.label}</span>
           </button>
         ))}
+        
+        {/* Help Button */}
+        {onHelpClick && (
+          <button
+            onClick={onHelpClick}
+            className="flex flex-col items-center justify-center w-12 h-full space-y-1 transition-colors duration-200 rounded-lg mx-1 min-h-[3.5rem] touch-manipulation text-gray-400 hover:text-indigo-600 hover:bg-gray-50 active:bg-gray-100"
+            title="Help & FAQ"
+          >
+            <span className="text-lg">🆘</span>
+            <span className="text-xs font-medium leading-tight">Help</span>
+          </button>
+        )}
       </div>
     </nav>
   );

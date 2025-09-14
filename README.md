@@ -4,6 +4,83 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 A Dutch postpartum care tracking application for monitoring baby and mother health during the "kraamweek" period.
 
+## Important User Flows
+
+### New User Experience (Onboarding)
+
+**First Time Users:**
+1. **Authentication** - User creates account or logs in
+2. **Onboarding Flow** - Interactive introduction to the app features
+   - Welcome screen explaining the app purpose
+   - Role-specific guidance (Parents vs. Kraamhulp)
+   - Feature overview with visual examples
+   - Important information about 24-hour time format
+3. **Baby Profile Setup** - User creates initial baby profile
+4. **First Data Entry** - Guided through first logging entry
+
+**Key Features:**
+- Role-specific onboarding (Parents see different content than Kraamhulp)
+- Skippable for users who want to dive right in
+- Help system accessible at any time via 🆘 button in navigation
+- Automatic detection of first-time users (no baby profile + no previous onboarding)
+
+### Core Application Flows
+
+**For Parents (Ouders):**
+1. **Daily Logging Flow**
+   - Navigate to Logging tab (➕)
+   - Select activity type (🍼 feeding, 💤 sleep, 🌡️ temperature, etc.)
+   - Fill required fields with 24-hour time format
+   - Add optional notes
+   - Save and view in Overview timeline
+
+2. **Data Review Flow**
+   - Check Overview tab (📋) for timeline of all activities
+   - View Analytics tab (📊) for trends and patterns
+   - Monitor automatic alerts for concerning values
+   - Add notes and questions that become tasks for Kraamhulp
+
+**For Kraamhulp:**
+1. **Daily Monitoring Flow**
+   - Dashboard overview of baby and mother statistics
+   - Review active alerts and warnings
+   - Check parent questions (auto-converted to tasks)
+   - Add professional observations
+
+2. **Care Management Flow**
+   - Monitor feeding, sleep, and health patterns
+   - Respond to parent questions via task system
+   - Add family observations and recommendations
+   - Track progress throughout kraamweek period
+
+### Help & Support System
+
+**Integrated Help System:**
+- 🆘 Help button in bottom navigation
+- Context-aware FAQ sections
+- Role-specific help content
+- Emergency contact information
+
+**FAQ Categories:**
+- **Algemeen** - Basic app usage and concepts
+- **Gegevens invoeren** - How to register different types of data
+- **Waarschuwingen** - Understanding automatic alerts and thresholds
+- **Tijd & datum** - 24-hour format requirements and date standards
+- **Voor kraamhulp** - Professional features and workflows
+
+### Critical Time Format Requirements
+
+**24-Hour Time Enforcement:**
+- All time inputs use HH:MM format (14:30, not 2:30 PM)
+- No AM/PM indicators anywhere in the interface
+- Consistent with Dutch medical standards
+- Prevents confusion in critical care documentation
+
+Example time entries:
+- Morning feeding: `08:30`
+- Afternoon nap: `14:15`
+- Evening temperature: `20:45`
+
 ## Architecture Overview
 
 The application follows a modular component-based architecture with clear separation of concerns:
