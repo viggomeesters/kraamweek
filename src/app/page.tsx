@@ -23,6 +23,7 @@ import OfflineIndicator from '@/components/OfflineIndicator';
 import SplashScreen from '@/components/SplashScreen';
 import ErrorAlert from '@/components/ErrorAlert';
 import SuccessFeedbackPrompt from '@/components/SuccessFeedbackPrompt';
+import AppSettings from '@/components/AppSettings';
 import { setupGlobalErrorHandling, ErrorLoggingService } from '@/lib/errorLoggingService';
 
 export default function Home() {
@@ -36,6 +37,7 @@ export default function Home() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showFeedbackDashboard, setShowFeedbackDashboard] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [showAppSettings, setShowAppSettings] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [toast, setToast] = useState<{ isVisible: boolean; message: string; type?: 'success' | 'error' | 'info' }>({
     isVisible: false,
@@ -189,6 +191,15 @@ export default function Home() {
     setShowUserProfile(false);
   };
 
+  const handleShowAppSettings = () => {
+    setShowAppSettings(true);
+    setIsMenuOpen(false);
+  };
+
+  const handleHideAppSettings = () => {
+    setShowAppSettings(false);
+  };
+
   const handleMenuToggle = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -307,6 +318,25 @@ export default function Home() {
         onComplete={handleOnboardingComplete}
         userRole={user?.rol || 'ouders'}
       />
+    );
+  }
+
+  // Show app settings screen
+  if (showAppSettings) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <TopNav 
+          title="Instellingen" 
+          onMenuClick={handleMenuToggle}
+          showBackButton={true}
+          onBackClick={handleHideAppSettings}
+        />
+        <div className="pt-16">
+          <AppSettings 
+            onBack={handleHideAppSettings}
+          />
+        </div>
+      </div>
     );
   }
 
@@ -443,6 +473,7 @@ export default function Home() {
         onHelpClick={handleShowHelp}
         onFeedbackClick={handleShowFeedback}
         onAccountClick={handleShowUserProfile}
+        onSettingsClick={handleShowAppSettings}
         userRole={user?.rol}
       />
       <InstallPrompt 

@@ -138,6 +138,7 @@ export interface User {
   email: string;
   naam: string;
   rol: 'ouders' | 'kraamhulp';
+  avatar?: string; // base64 encoded image or URL
   createdAt: string;
   lastLoginAt?: string;
   profileCompleted: boolean;
