@@ -4,9 +4,10 @@ interface BottomNavProps {
   activeTab: 'profile' | 'overview' | 'logging' | 'analytics' | 'user';
   onTabChange: (tab: 'profile' | 'overview' | 'logging' | 'analytics' | 'user') => void;
   onHelpClick?: () => void;
+  onFeedbackClick?: () => void;
 }
 
-export default function BottomNav({ activeTab, onTabChange, onHelpClick }: BottomNavProps) {
+export default function BottomNav({ activeTab, onTabChange, onHelpClick, onFeedbackClick }: BottomNavProps) {
   const navItems = [
     { id: 'profile' as const, label: 'Profiel', icon: '👶' },
     { id: 'overview' as const, label: 'Overzicht', icon: '📋' },
@@ -42,6 +43,18 @@ export default function BottomNav({ activeTab, onTabChange, onHelpClick }: Botto
           >
             <span className="text-lg">🆘</span>
             <span className="text-xs font-medium leading-tight">Help</span>
+          </button>
+        )}
+
+        {/* Feedback Button */}
+        {onFeedbackClick && (
+          <button
+            onClick={onFeedbackClick}
+            className="flex flex-col items-center justify-center w-12 h-full space-y-1 transition-colors duration-200 rounded-lg mx-1 min-h-[3.5rem] touch-manipulation text-gray-400 hover:text-green-600 hover:bg-green-50 active:bg-green-100"
+            title="Feedback versturen"
+          >
+            <span className="text-lg">💬</span>
+            <span className="text-xs font-medium leading-tight">Feedback</span>
           </button>
         )}
       </div>
