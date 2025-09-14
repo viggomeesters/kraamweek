@@ -66,62 +66,109 @@ const DefaultErrorFallback: React.FC<{ errorId?: string; onRetry: () => void }> 
   errorId, 
   onRetry 
 }) => {
+  const [showFeedback, setShowFeedback] = React.useState(false);
+
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-          <svg 
-            className="w-8 h-8 text-red-600" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" 
-            />
-          </svg>
-        </div>
-        
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-          Er is iets misgegaan
-        </h2>
-        
-        <p className="text-gray-600 mb-4">
-          De applicatie heeft een onverwachte fout tegengekomen. 
-          De fout is automatisch gerapporteerd voor verdere analyse.
-        </p>
-        
-        {errorId && (
-          <p className="text-sm text-gray-500 mb-4">
-            Fout ID: <code className="bg-gray-100 px-2 py-1 rounded">{errorId}</code>
-          </p>
-        )}
-        
-        <div className="space-y-3">
-          <Button
-            onClick={onRetry}
-            fullWidth
-          >
-            Probeer opnieuw
-          </Button>
+    <>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+            <svg 
+              className="w-8 h-8 text-red-600" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" 
+              />
+            </svg>
+          </div>
           
-          <Button
-            variant="secondary"
-            onClick={() => window.location.reload()}
-            fullWidth
-          >
-            Pagina verversen
-          </Button>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Er is iets misgegaan
+          </h2>
+          
+          <p className="text-gray-600 mb-4">
+            De applicatie heeft een onverwachte fout tegengekomen. 
+            De fout is automatisch gerapporteerd voor verdere analyse.
+          </p>
+          
+          {errorId && (
+            <p className="text-sm text-gray-500 mb-4">
+              Fout ID: <code className="bg-gray-100 px-2 py-1 rounded">{errorId}</code>
+            </p>
+          )}
+          
+          <div className="space-y-3">
+            <Button
+              onClick={onRetry}
+              fullWidth
+            >
+              Probeer opnieuw
+            </Button>
+            
+            <Button
+              variant="secondary"
+              onClick={() => window.location.reload()}
+              fullWidth
+            >
+              Pagina verversen
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => setShowFeedback(true)}
+              fullWidth
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              Probleem melden
+            </Button>
+          </div>
+          
+          <p className="text-xs text-gray-500 mt-4">
+            Als het probleem blijft bestaan, neem dan contact op met de ondersteuning.
+          </p>
         </div>
-        
-        <p className="text-xs text-gray-500 mt-4">
-          Als het probleem blijft bestaan, neem dan contact op met de ondersteuning.
-        </p>
       </div>
-    </div>
+
+      {/* Import FeedbackModal dynamically to avoid circular imports */}
+      {showFeedback && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Probleem melden</h3>
+            <p className="text-gray-600 mb-4">
+              Help ons dit probleem op te lossen door het te melden via onze feedback functie.
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowFeedback(false);
+                  // Trigger feedback modal through global event
+                  window.dispatchEvent(new CustomEvent('openFeedbackModal', { 
+                    detail: { prefillError: true, errorId } 
+                  }));
+                }}
+                className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
+              >
+                Feedback versturen
+              </button>
+              <button
+                onClick={() => setShowFeedback(false)}
+                className="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300"
+              >
+                Annuleren
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
