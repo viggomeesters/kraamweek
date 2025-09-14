@@ -20,6 +20,7 @@ import FeedbackModal from '@/components/FeedbackModal';
 import FeedbackDashboard from '@/components/FeedbackDashboard';
 import InstallPrompt from '@/components/InstallPrompt';
 import OfflineIndicator from '@/components/OfflineIndicator';
+import SplashScreen from '@/components/SplashScreen';
 import { setupGlobalErrorHandling, ErrorLoggingService } from '@/lib/errorLoggingService';
 
 export default function Home() {
@@ -27,6 +28,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'profile' | 'overview' | 'logging' | 'analytics'>('profile');
   const [data, setData] = useState<AppData>(DataService.loadData());
   const [isLoading, setIsLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -53,7 +55,7 @@ export default function Home() {
 
   useEffect(() => {
     // Load initial data when user changes
-    if (user) {
+    if (user && !showSplash) {
       setData(DataService.loadData());
       
       // Check if user needs onboarding (first time user with no baby profile)
@@ -65,8 +67,10 @@ export default function Home() {
         setShowOnboarding(true);
       }
     }
-    setIsLoading(false);
-  }, [user]);
+    if (!showSplash) {
+      setIsLoading(false);
+    }
+  }, [user, showSplash]);
 
   const refreshData = () => {
     setData(DataService.loadData());
@@ -78,6 +82,10 @@ export default function Home() {
 
   const hideToast = () => {
     setToast(prev => ({ ...prev, isVisible: false }));
+  };
+
+  const handleSplashComplete = () => {
+    setShowSplash(false);
   };
 
   const handleOnboardingComplete = () => {
@@ -201,6 +209,11 @@ export default function Home() {
       showToast('Er is een fout opgetreden bij het toevoegen van de registratie.', 'error');
     }
   };
+
+  // Show splash screen first
+  if (showSplash) {
+    return <SplashScreen onComplete={handleSplashComplete} />;
+  }
 
   // Show loading screen while auth is being determined
   if (authLoading || isLoading) {
