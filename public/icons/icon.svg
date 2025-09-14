@@ -1,0 +1,21 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="#4f46e5" stroke="#ffffff" stroke-width="12"/>
+  
+  <!-- Baby face outline -->
+  <circle cx="256" cy="220" r="120" fill="#fbbf24" stroke="#ffffff" stroke-width="8"/>
+  
+  <!-- Eyes -->
+  <circle cx="226" cy="200" r="12" fill="#1f2937"/>
+  <circle cx="286" cy="200" r="12" fill="#1f2937"/>
+  
+  <!-- Mouth -->
+  <path d="M 230 240 Q 256 260 282 240" stroke="#1f2937" stroke-width="6" fill="none" stroke-linecap="round"/>
+  
+  <!-- Hearts for health/care theme -->
+  <path d="M 180 350 C 180 340, 190 330, 200 330 C 210 330, 220 340, 220 350 C 220 370, 200 390, 200 390 C 200 390, 180 370, 180 350 Z" fill="#ef4444"/>
+  <path d="M 292 350 C 292 340, 302 330, 312 330 C 322 330, 332 340, 332 350 C 332 370, 312 390, 312 390 C 312 390, 292 370, 292 350 Z" fill="#ef4444"/>
+  
+  <!-- Text -->
+  <text x="256" y="450" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="32" font-weight="bold">K</text>
+</svg>
