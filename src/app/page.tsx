@@ -14,6 +14,9 @@ import AuthForm from '@/components/AuthForm';
 import UserProfile from '@/components/UserProfile';
 import Onboarding from '@/components/Onboarding';
 import Help from '@/components/Help';
+import FeedbackModal from '@/components/FeedbackModal';
+import FeedbackDashboard from '@/components/FeedbackDashboard';
+import { setupGlobalErrorHandling, ErrorLoggingService } from '@/lib/errorLoggingService';
 
 export default function Home() {
   const { user, isLoading: authLoading, isAuthenticated, login, register, logout, updateProfile } = useAuth();
@@ -22,11 +25,25 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showFeedbackDashboard, setShowFeedbackDashboard] = useState(false);
   const [toast, setToast] = useState<{ isVisible: boolean; message: string; type?: 'success' | 'error' | 'info' }>({
     isVisible: false,
     message: '',
     type: 'success'
   });
+
+  // Setup global error handling on component mount
+  useEffect(() => {
+    setupGlobalErrorHandling();
+    
+    // Log application start
+    const errorLogger = ErrorLoggingService.getInstance();
+    errorLogger.logUserAction('app_started', 'App', {
+      userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown',
+      timestamp: new Date().toISOString(),
+    }, user?.id);
+  }, [user?.id]);
 
   useEffect(() => {
     // Load initial data when user changes
@@ -65,24 +82,98 @@ export default function Home() {
 
   const handleShowHelp = () => {
     setShowHelp(true);
+    // Log help access
+    const errorLogger = ErrorLoggingService.getInstance();
+    errorLogger.logUserAction('help_opened', 'Help', {}, user?.id);
   };
 
   const handleHideHelp = () => {
     setShowHelp(false);
   };
 
+  const handleShowFeedback = () => {
+    setShowFeedbackModal(true);
+    // Log feedback modal access
+    const errorLogger = ErrorLoggingService.getInstance();
+    errorLogger.logUserAction('feedback_modal_opened', 'FeedbackModal', {}, user?.id);
+  };
+
+  const handleHideFeedback = () => {
+    setShowFeedbackModal(false);
+  };
+
+  const handleFeedbackSuccess = (feedbackId: string) => {
+    showToast('Bedankt voor je feedback! We nemen het mee in onze verbeteringen.', 'success');
+    // Log successful feedback submission
+    const errorLogger = ErrorLoggingService.getInstance();
+    errorLogger.logUserAction('feedback_submitted', 'FeedbackModal', { feedbackId }, user?.id);
+  };
+
+  const handleShowFeedbackDashboard = () => {
+    setShowFeedbackDashboard(true);
+    // Log dashboard access
+    const errorLogger = ErrorLoggingService.getInstance();
+    errorLogger.logUserAction('feedback_dashboard_opened', 'FeedbackDashboard', {}, user?.id);
+  };
+
+  const handleHideFeedbackDashboard = () => {
+    setShowFeedbackDashboard(false);
+  };
+
   const handleAddBabyRecord = (record: Omit<BabyRecord, 'id'>) => {
-    DataService.addBabyRecord(record);
-    refreshData();
-    // Switch to overview to show the new record
-    setActiveTab('overview');
+    try {
+      DataService.addBabyRecord(record);
+      refreshData();
+      // Switch to overview to show the new record
+      setActiveTab('overview');
+      
+      // Log successful record addition
+      const errorLogger = ErrorLoggingService.getInstance();
+      errorLogger.logUserAction('baby_record_added', 'LoggingGallery', {
+        recordType: record.type,
+      }, user?.id);
+    } catch (error) {
+      const errorLogger = ErrorLoggingService.getInstance();
+      errorLogger.logError(
+        error instanceof Error ? error : new Error('Failed to add baby record'),
+        'error',
+        {
+          component: 'App',
+          action: 'add_baby_record',
+          userId: user?.id,
+          metadata: { recordType: record.type },
+        }
+      );
+      showToast('Er is een fout opgetreden bij het toevoegen van de registratie.', 'error');
+    }
   };
 
   const handleAddMotherRecord = (record: Omit<MotherRecord, 'id'>) => {
-    DataService.addMotherRecord(record);
-    refreshData();
-    // Switch to overview to show the new record
-    setActiveTab('overview');
+    try {
+      DataService.addMotherRecord(record);
+      refreshData();
+      // Switch to overview to show the new record
+      setActiveTab('overview');
+      
+      // Log successful record addition
+      const errorLogger = ErrorLoggingService.getInstance();
+      errorLogger.logUserAction('mother_record_added', 'LoggingGallery', {
+        recordType: record.type,
+      }, user?.id);
+    } catch (error) {
+      const errorLogger = ErrorLoggingService.getInstance();
+      errorLogger.logError(
+        error instanceof Error ? error : new Error('Failed to add mother record'),
+        'error',
+        {
+          component: 'App',
+          action: 'add_mother_record',
+          userId: user?.id,
+          metadata: { recordType: record.type },
+        }
+      );
+      showToast('Er is een fout opgetreden bij het toevoegen van de registratie.', 'error');
+    }
   };
 
   // Show loading screen while auth is being determined
@@ -103,6 +194,15 @@ export default function Home() {
       <Onboarding 
         onComplete={handleOnboardingComplete}
         userRole={user?.rol || 'ouders'}
+      />
+    );
+  }
+
+  // Show feedback dashboard for kraamhulp
+  if (showFeedbackDashboard) {
+    return (
+      <FeedbackDashboard 
+        onBack={handleHideFeedbackDashboard}
       />
     );
   }
@@ -162,6 +262,7 @@ export default function Home() {
                 user={user!}
                 onLogout={logout}
                 onProfileUpdate={updateProfile}
+                onShowFeedbackDashboard={user?.rol === 'kraamhulp' ? handleShowFeedbackDashboard : undefined}
               />
             </div>
           </div>
@@ -174,12 +275,22 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       {renderActiveTab()}
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} onHelpClick={handleShowHelp} />
+      <BottomNav 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab} 
+        onHelpClick={handleShowHelp}
+        onFeedbackClick={handleShowFeedback}
+      />
       <Toast 
         message={toast.message}
         type={toast.type}
         isVisible={toast.isVisible}
         onClose={hideToast}
+      />
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={handleHideFeedback}
+        onSuccess={handleFeedbackSuccess}
       />
     </div>
   );

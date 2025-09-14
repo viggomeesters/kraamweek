@@ -101,6 +101,9 @@ export interface AppData {
   alerts: Alert[];
   babyProfile?: BabyProfile; // Single baby profile (future: support multiple)
   userId?: string; // Associated user ID for multi-user support
+  // Monitoring and feedback data
+  errorLogs?: ErrorLog[]; // Error logging for debugging
+  userFeedback?: UserFeedback[]; // User feedback and feature requests
   // Future extensibility placeholders:
   notifications?: Notification[]; // For future notification system
   settings?: AppSettings; // For user preferences
@@ -315,6 +318,90 @@ export const isNotification = (item: unknown): item is Notification => {
 export const isMultiBabyData = (data: AppData | MultiBabyData): data is MultiBabyData => {
   return 'babies' in data && Array.isArray(data.babies);
 };
+
+// Error logging and monitoring interfaces
+export interface ErrorLog {
+  id: string;
+  timestamp: string;
+  level: 'error' | 'warning' | 'info';
+  message: string;
+  stack?: string;
+  userId?: string;
+  userAgent?: string;
+  url: string;
+  component?: string;
+  action?: string;
+  metadata?: Record<string, unknown>;
+  resolved?: boolean;
+  resolvedBy?: string;
+  resolvedAt?: string;
+  resolutionNotes?: string;
+}
+
+// User feedback interfaces
+export interface UserFeedback {
+  id: string;
+  timestamp: string;
+  userId?: string;
+  userRole?: 'ouders' | 'kraamhulp';
+  type: 'bug' | 'feature_request' | 'improvement' | 'question' | 'other';
+  category: 'usability' | 'performance' | 'functionality' | 'design' | 'data' | 'other';
+  title: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'new' | 'in_progress' | 'resolved' | 'closed';
+  assignedTo?: string;
+  statusUpdatedAt?: string;
+  statusUpdatedBy?: string;
+  responseMessage?: string;
+  attachments?: FeedbackAttachment[];
+  votes?: number; // for community voting on feedback
+  reproductionSteps?: string[];
+  expectedBehavior?: string;
+  actualBehavior?: string;
+  browserInfo?: BrowserInfo;
+  pageContext?: PageContext;
+}
+
+export interface FeedbackAttachment {
+  id: string;
+  type: 'screenshot' | 'log' | 'other';
+  filename: string;
+  data: string; // base64 encoded data
+  size: number;
+}
+
+export interface BrowserInfo {
+  userAgent: string;
+  viewport: {
+    width: number;
+    height: number;
+  };
+  language: string;
+  platform: string;
+}
+
+export interface PageContext {
+  url: string;
+  referrer?: string;
+  timestamp: string;
+  activeTab?: string;
+  currentData?: {
+    babyRecordsCount: number;
+    motherRecordsCount: number;
+    alertsCount: number;
+  };
+}
+
+// Monitoring statistics
+export interface MonitoringStats {
+  totalErrors: number;
+  unresolvedErrors: number;
+  totalFeedback: number;
+  pendingFeedback: number;
+  userSatisfactionScore?: number;
+  lastUpdated: string;
+}
 
 // Data migration utilities (for future use)
 export interface DataMigration {

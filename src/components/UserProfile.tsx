@@ -7,9 +7,10 @@ interface UserProfileProps {
   user: User;
   onLogout: () => Promise<{ success: boolean; error?: string }>;
   onProfileUpdate: (updates: Partial<Pick<User, 'naam' | 'rol'>>) => Promise<{ success: boolean; error?: string }>;
+  onShowFeedbackDashboard?: () => void;
 }
 
-export default function UserProfile({ user, onLogout, onProfileUpdate }: UserProfileProps) {
+export default function UserProfile({ user, onLogout, onProfileUpdate, onShowFeedbackDashboard }: UserProfileProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     naam: user.naam,
@@ -174,7 +175,18 @@ export default function UserProfile({ user, onLogout, onProfileUpdate }: UserPro
           </button>
         </div>
       ) : (
-        <div className="mt-6">
+        <div className="mt-6 space-y-3">
+          {/* Feedback Dashboard Link for Kraamhulp */}
+          {user.rol === 'kraamhulp' && onShowFeedbackDashboard && (
+            <button
+              onClick={onShowFeedbackDashboard}
+              className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center justify-center space-x-2"
+            >
+              <span>📊</span>
+              <span>Team Dashboard</span>
+            </button>
+          )}
+          
           <button
             onClick={handleLogout}
             disabled={isLoading}
