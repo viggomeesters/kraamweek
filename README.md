@@ -303,6 +303,41 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The Kraamweek app is optimized for deployment on Vercel with automated CI/CD pipeline.
+
+### Quick Deployment
+
+1. **Fork or import** this repository to Vercel
+2. **Configure environment variables** (see [DEPLOYMENT.md](./DEPLOYMENT.md))
+3. **Deploy automatically** on every push to main branch
+
+### Deployment Features
+
+- ✅ **Automated CI/CD** with GitHub Actions
+- ✅ **Production-ready build** with Next.js optimizations
+- ✅ **Security headers** and HTTPS enforcement
+- ✅ **Health monitoring** endpoint (`/api/health`)
+- ✅ **Environment variable** management
+- ✅ **Zero-downtime deployments**
+
+### Quick Setup
+
+```bash
+# Validate your deployment setup
+./scripts/validate-deployment.sh
+
+# Manual deployment (requires Vercel CLI)
+npm install -g vercel
+vercel --prod
+```
+
+For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+### Production Environment
+
+The app gracefully handles different environments:
+- **Development**: Uses localStorage with demo data
+- **Production**: Integrates with Supabase backend
+- **Demo mode**: Works without database connection
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

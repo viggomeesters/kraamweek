@@ -1,0 +1,66 @@
+name: ✅ Validate Configuration
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'vercel.json'
+      - 'package.json'
+      - '.env.example'
+      - '.env.production'
+
+jobs:
+  validate-config:
+    name: 🔍 Validate Deployment Config
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: 📥 Install dependencies
+        run: npm ci
+        
+      - name: 🔍 Validate deployment setup
+        run: |
+          echo "Checking required files..."
+          
+          # Check required files exist
+          files=("vercel.json" ".env.example" ".env.production" "DEPLOYMENT.md")
+          for file in "${files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Missing required file: $file"
+              exit 1
+            else
+              echo "✅ Found: $file"
+            fi
+          done
+          
+          # Validate vercel.json syntax
+          echo "Validating vercel.json..."
+          node -e "JSON.parse(require('fs').readFileSync('vercel.json', 'utf8'))" || exit 1
+          echo "✅ vercel.json is valid JSON"
+          
+          # Check if validation script exists and is executable
+          if [ -f "scripts/validate-deployment.sh" ] && [ -x "scripts/validate-deployment.sh" ]; then
+            echo "✅ Deployment validation script found and executable"
+          else
+            echo "❌ Deployment validation script missing or not executable"
+            exit 1
+          fi
+          
+      - name: 🧪 Test build with production env
+        run: |
+          # Test build works with production environment
+          cp .env.production .env.local
+          npm run build
+          rm .env.local
+          
+      - name: ✅ Configuration validation complete
+        run: echo "🎉 All deployment configuration checks passed!"
