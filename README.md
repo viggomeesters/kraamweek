@@ -418,3 +418,11 @@ The app gracefully handles different environments:
 - **Demo mode**: Works without database connection
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## License
+
+This project is proprietary software owned by Viggo Meesters. All rights reserved.
+
+**This software is not open source.** No license is granted to use, copy, modify, or distribute this software. For licensing inquiries or permissions, please contact the owner.
+
+See the [LICENSE](./LICENSE) file for complete terms and conditions.
