@@ -21,6 +21,8 @@ import FeedbackDashboard from '@/components/FeedbackDashboard';
 import InstallPrompt from '@/components/InstallPrompt';
 import OfflineIndicator from '@/components/OfflineIndicator';
 import SplashScreen from '@/components/SplashScreen';
+import ErrorAlert from '@/components/ErrorAlert';
+import SuccessFeedbackPrompt from '@/components/SuccessFeedbackPrompt';
 import { setupGlobalErrorHandling, ErrorLoggingService } from '@/lib/errorLoggingService';
 
 export default function Home() {
@@ -40,10 +42,31 @@ export default function Home() {
     message: '',
     type: 'success'
   });
+  const [errorAlert, setErrorAlert] = useState<{ isVisible: boolean; error: Error | string; errorId?: string }>({
+    isVisible: false,
+    error: '',
+    errorId: undefined
+  });
+  const [successFeedbackPrompt, setSuccessFeedbackPrompt] = useState<{ isVisible: boolean; message: string }>({
+    isVisible: false,
+    message: ''
+  });
 
   // Setup global error handling on component mount
   useEffect(() => {
     setupGlobalErrorHandling();
+    
+    // Listen for global feedback modal events from ErrorBoundary
+    const handleOpenFeedbackModal = (event: CustomEvent) => {
+      const { prefillError, errorId } = event.detail || {};
+      if (prefillError) {
+        // Store error context for feedback modal
+        localStorage.setItem('feedbackErrorContext', JSON.stringify({ errorId }));
+      }
+      setShowFeedbackModal(true);
+    };
+
+    window.addEventListener('openFeedbackModal', handleOpenFeedbackModal as EventListener);
     
     // Log application start
     const errorLogger = ErrorLoggingService.getInstance();
@@ -51,6 +74,10 @@ export default function Home() {
       userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown',
       timestamp: new Date().toISOString(),
     }, user?.id);
+
+    return () => {
+      window.removeEventListener('openFeedbackModal', handleOpenFeedbackModal as EventListener);
+    };
   }, [user?.id]);
 
   useEffect(() => {
@@ -80,8 +107,24 @@ export default function Home() {
     setToast({ isVisible: true, message, type });
   };
 
+  const showErrorAlert = (error: Error | string, errorId?: string) => {
+    setErrorAlert({ isVisible: true, error, errorId });
+  };
+
+  const showSuccessFeedbackPrompt = (message: string) => {
+    setSuccessFeedbackPrompt({ isVisible: true, message });
+  };
+
   const hideToast = () => {
     setToast(prev => ({ ...prev, isVisible: false }));
+  };
+
+  const hideErrorAlert = () => {
+    setErrorAlert(prev => ({ ...prev, isVisible: false }));
+  };
+
+  const hideSuccessFeedbackPrompt = () => {
+    setSuccessFeedbackPrompt(prev => ({ ...prev, isVisible: false }));
   };
 
   const handleSplashComplete = () => {
@@ -161,6 +204,11 @@ export default function Home() {
       // Switch to overview to show the new record
       setActiveTab('overview');
       
+      // Show success feedback prompt
+      showSuccessFeedbackPrompt(
+        'Baby registratie succesvol toegevoegd!'
+      );
+      
       // Log successful record addition
       const errorLogger = ErrorLoggingService.getInstance();
       errorLogger.logUserAction('baby_record_added', 'LoggingGallery', {
@@ -168,8 +216,10 @@ export default function Home() {
       }, user?.id);
     } catch (error) {
       const errorLogger = ErrorLoggingService.getInstance();
+      const errorInstance = error instanceof Error ? error : new Error('Failed to add baby record');
+      
       errorLogger.logError(
-        error instanceof Error ? error : new Error('Failed to add baby record'),
+        errorInstance,
         'error',
         {
           component: 'App',
@@ -178,7 +228,15 @@ export default function Home() {
           metadata: { recordType: record.type },
         }
       );
-      showToast('Er is een fout opgetreden bij het toevoegen van de registratie.', 'error');
+      
+      // Get error ID for display
+      const errorLogs = errorLogger.getErrorLogs();
+      const latestError = errorLogs[0];
+      
+      showErrorAlert(
+        'Er is een fout opgetreden bij het toevoegen van de baby registratie. Probeer het opnieuw.',
+        latestError?.id
+      );
     }
   };
 
@@ -189,6 +247,11 @@ export default function Home() {
       // Switch to overview to show the new record
       setActiveTab('overview');
       
+      // Show success feedback prompt
+      showSuccessFeedbackPrompt(
+        'Moeder registratie succesvol toegevoegd!'
+      );
+      
       // Log successful record addition
       const errorLogger = ErrorLoggingService.getInstance();
       errorLogger.logUserAction('mother_record_added', 'LoggingGallery', {
@@ -196,8 +259,10 @@ export default function Home() {
       }, user?.id);
     } catch (error) {
       const errorLogger = ErrorLoggingService.getInstance();
+      const errorInstance = error instanceof Error ? error : new Error('Failed to add mother record');
+      
       errorLogger.logError(
-        error instanceof Error ? error : new Error('Failed to add mother record'),
+        errorInstance,
         'error',
         {
           component: 'App',
@@ -206,7 +271,15 @@ export default function Home() {
           metadata: { recordType: record.type },
         }
       );
-      showToast('Er is een fout opgetreden bij het toevoegen van de registratie.', 'error');
+      
+      // Get error ID for display
+      const errorLogs = errorLogger.getErrorLogs();
+      const latestError = errorLogs[0];
+      
+      showErrorAlert(
+        'Er is een fout opgetreden bij het toevoegen van de moeder registratie. Probeer het opnieuw.',
+        latestError?.id
+      );
     }
   };
 
@@ -386,6 +459,25 @@ export default function Home() {
         isOpen={showFeedbackModal}
         onClose={handleHideFeedback}
         onSuccess={handleFeedbackSuccess}
+      />
+      {errorAlert.isVisible && (
+        <div className="fixed top-4 left-4 right-4 z-50 max-w-md mx-auto">
+          <ErrorAlert
+            error={errorAlert.error}
+            errorId={errorAlert.errorId}
+            onDismiss={hideErrorAlert}
+            onRetry={() => {
+              hideErrorAlert();
+              // Trigger a page refresh or specific retry logic
+              window.location.reload();
+            }}
+          />
+        </div>
+      )}
+      <SuccessFeedbackPrompt
+        isVisible={successFeedbackPrompt.isVisible}
+        onClose={hideSuccessFeedbackPrompt}
+        successMessage={successFeedbackPrompt.message}
       />
     </div>
   );
