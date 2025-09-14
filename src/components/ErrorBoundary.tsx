@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Button } from '@/components/ui';
 import { ErrorLoggingService, withErrorLogging } from '@/lib/errorLoggingService';
 
 interface ErrorBoundaryState {
@@ -100,19 +101,20 @@ const DefaultErrorFallback: React.FC<{ errorId?: string; onRetry: () => void }> 
         )}
         
         <div className="space-y-3">
-          <button
+          <Button
             onClick={onRetry}
-            className="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors"
+            fullWidth
           >
             Probeer opnieuw
-          </button>
+          </Button>
           
-          <button
+          <Button
+            variant="secondary"
             onClick={() => window.location.reload()}
-            className="w-full bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors"
+            fullWidth
           >
             Pagina verversen
-          </button>
+          </Button>
         </div>
         
         <p className="text-xs text-gray-500 mt-4">

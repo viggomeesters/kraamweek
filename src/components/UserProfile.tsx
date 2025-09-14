@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { User } from '@/types';
+import { Button, Input, Select, Card, Alert } from '@/components/ui';
 
 interface UserProfileProps {
   user: User;
@@ -58,73 +59,53 @@ export default function UserProfile({ user, onLogout, onProfileUpdate, onShowFee
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-6">
+    <Card>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-900">Gebruikersprofiel</h2>
         {!isEditing && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setIsEditing(true)}
-            className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
           >
             Bewerken
-          </button>
+          </Button>
         )}
       </div>
 
       {message && (
-        <div className={`mb-4 p-3 rounded-md ${
-          message.type === 'success' 
-            ? 'bg-green-50 border border-green-200 text-green-700' 
-            : 'bg-red-50 border border-red-200 text-red-700'
-        }`}>
-          <p className="text-sm">{message.text}</p>
-        </div>
+        <Alert 
+          variant={message.type === 'success' ? 'success' : 'error'}
+          className="mb-4"
+        >
+          {message.text}
+        </Alert>
       )}
 
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Naam
-          </label>
-          {isEditing ? (
-            <input
-              type="text"
-              value={formData.naam}
-              onChange={(e) => setFormData(prev => ({ ...prev, naam: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Uw volledige naam"
-            />
-          ) : (
-            <p className="text-gray-900">{user.naam}</p>
-          )}
-        </div>
+        <Input
+          label="Naam"
+          value={isEditing ? formData.naam : user.naam}
+          onChange={(e) => setFormData(prev => ({ ...prev, naam: e.target.value }))}
+          placeholder="Uw volledige naam"
+          readOnly={!isEditing}
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            E-mail
-          </label>
-          <p className="text-gray-900">{user.email}</p>
-        </div>
+        <Input
+          label="E-mail"
+          value={user.email}
+          readOnly
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Rol
-          </label>
-          {isEditing ? (
-            <select
-              value={formData.rol}
-              onChange={(e) => setFormData(prev => ({ ...prev, rol: e.target.value as 'ouders' | 'kraamhulp' }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="ouders">Ouder(s)</option>
-              <option value="kraamhulp">Kraamhulp</option>
-            </select>
-          ) : (
-            <p className="text-gray-900">
-              {user.rol === 'ouders' ? 'Ouder(s)' : 'Kraamhulp'}
-            </p>
-          )}
-        </div>
+        <Select
+          label="Rol"
+          value={isEditing ? formData.rol : user.rol}
+          onChange={(e) => setFormData(prev => ({ ...prev, rol: e.target.value as 'ouders' | 'kraamhulp' }))}
+          disabled={!isEditing}
+        >
+          <option value="ouders">Ouder(s)</option>
+          <option value="kraamhulp">Kraamhulp</option>
+        </Select>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -159,43 +140,47 @@ export default function UserProfile({ user, onLogout, onProfileUpdate, onShowFee
 
       {isEditing ? (
         <div className="flex gap-3 mt-6">
-          <button
+          <Button
             onClick={handleSave}
-            disabled={isLoading || !formData.naam.trim()}
-            className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            loading={isLoading}
+            disabled={!formData.naam.trim()}
+            fullWidth
           >
-            {isLoading ? 'Opslaan...' : 'Opslaan'}
-          </button>
-          <button
+            Opslaan
+          </Button>
+          <Button
+            variant="secondary"
             onClick={handleCancel}
             disabled={isLoading}
-            className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-400 transition-colors font-medium disabled:opacity-50"
+            fullWidth
           >
             Annuleren
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="mt-6 space-y-3">
           {/* Feedback Dashboard Link for Kraamhulp */}
           {user.rol === 'kraamhulp' && onShowFeedbackDashboard && (
-            <button
+            <Button
               onClick={onShowFeedbackDashboard}
-              className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center justify-center space-x-2"
+              fullWidth
+              className="flex items-center justify-center space-x-2"
             >
               <span>📊</span>
               <span>Team Dashboard</span>
-            </button>
+            </Button>
           )}
           
-          <button
+          <Button
+            variant="danger"
             onClick={handleLogout}
-            disabled={isLoading}
-            className="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            loading={isLoading}
+            fullWidth
           >
-            {isLoading ? 'Uitloggen...' : 'Uitloggen'}
-          </button>
+            Uitloggen
+          </Button>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

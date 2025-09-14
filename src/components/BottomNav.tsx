@@ -25,7 +25,7 @@ export default function BottomNav({ activeTab, onTabChange, onHelpClick, onFeedb
             onClick={() => onTabChange(item.id)}
             className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors duration-200 rounded-lg mx-1 min-h-[3.5rem] touch-manipulation ${
               activeTab === item.id
-                ? 'text-indigo-600 bg-indigo-50'
+                ? 'text-primary-600 bg-primary-50'
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 active:bg-gray-100'
             }`}
           >
@@ -38,7 +38,7 @@ export default function BottomNav({ activeTab, onTabChange, onHelpClick, onFeedb
         {onHelpClick && (
           <button
             onClick={onHelpClick}
-            className="flex flex-col items-center justify-center w-12 h-full space-y-1 transition-colors duration-200 rounded-lg mx-1 min-h-[3.5rem] touch-manipulation text-gray-400 hover:text-indigo-600 hover:bg-gray-50 active:bg-gray-100"
+            className="flex flex-col items-center justify-center w-12 h-full space-y-1 transition-colors duration-200 rounded-lg mx-1 min-h-[3.5rem] touch-manipulation text-gray-400 hover:text-primary-600 hover:bg-gray-50 active:bg-gray-100"
             title="Help & FAQ"
           >
             <span className="text-lg">🆘</span>
@@ -50,7 +50,7 @@ export default function BottomNav({ activeTab, onTabChange, onHelpClick, onFeedb
         {onFeedbackClick && (
           <button
             onClick={onFeedbackClick}
-            className="flex flex-col items-center justify-center w-12 h-full space-y-1 transition-colors duration-200 rounded-lg mx-1 min-h-[3.5rem] touch-manipulation text-gray-400 hover:text-green-600 hover:bg-green-50 active:bg-green-100"
+            className="flex flex-col items-center justify-center w-12 h-full space-y-1 transition-colors duration-200 rounded-lg mx-1 min-h-[3.5rem] touch-manipulation text-gray-400 hover:text-success-600 hover:bg-success-50 active:bg-success-100"
             title="Feedback versturen"
           >
             <span className="text-lg">💬</span>

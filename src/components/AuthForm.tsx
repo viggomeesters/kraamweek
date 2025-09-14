@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { LoginCredentials, RegisterData } from '@/types';
 import { validateEmail, validatePassword, validateName, validateRole } from '@/lib/validation';
+import { Button, Input, Select, Card, Alert } from '@/components/ui';
 
 interface AuthFormProps {
   onLogin: (credentials: LoginCredentials) => Promise<{ success: boolean; error?: string }>;
@@ -134,7 +135,7 @@ export default function AuthForm({ onLogin, onRegister, isLoading }: AuthFormPro
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-indigo-100">
+          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-primary-100">
             <span className="text-2xl">👶</span>
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
@@ -145,51 +146,31 @@ export default function AuthForm({ onLogin, onRegister, isLoading }: AuthFormPro
           </p>
         </div>
         
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <span className="text-red-400">⚠️</span>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
-              </div>
-            </div>
-          )}
+        <Card>
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            {error && (
+              <Alert variant="error">
+                {error}
+              </Alert>
+            )}
 
-          <div className="space-y-4">
-            {!isLoginMode && (
-              <div>
-                <label htmlFor="naam" className="block text-sm font-medium text-gray-700 mb-1">
-                  Volledige naam *
-                </label>
-                <input
-                  id="naam"
+            <div className="space-y-4">
+              {!isLoginMode && (
+                <Input
+                  label="Volledige naam"
                   name="naam"
                   type="text"
                   required={!isLoginMode}
                   value={formData.naam}
                   onChange={(e) => handleInputChange('naam', e.target.value)}
                   onBlur={(e) => validateField('naam', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${
-                    getFieldError('naam') ? 'border-red-300' : 'border-gray-300'
-                  }`}
+                  error={getFieldError('naam') || undefined}
                   placeholder="Uw volledige naam"
                 />
-                {getFieldError('naam') && (
-                  <p className="mt-1 text-sm text-red-600">{getFieldError('naam')}</p>
-                )}
-              </div>
-            )}
+              )}
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                E-mailadres *
-              </label>
-              <input
-                id="email"
+              <Input
+                label="E-mailadres"
                 name="email"
                 type="email"
                 autoComplete="email"
@@ -197,22 +178,12 @@ export default function AuthForm({ onLogin, onRegister, isLoading }: AuthFormPro
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 onBlur={(e) => validateField('email', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${
-                  getFieldError('email') ? 'border-red-300' : 'border-gray-300'
-                }`}
+                error={getFieldError('email') || undefined}
                 placeholder="uw@email.nl"
               />
-              {getFieldError('email') && (
-                <p className="mt-1 text-sm text-red-600">{getFieldError('email')}</p>
-              )}
-            </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Wachtwoord *
-              </label>
-              <input
-                id="password"
+              <Input
+                label="Wachtwoord"
                 name="password"
                 type="password"
                 autoComplete={isLoginMode ? 'current-password' : 'new-password'}
@@ -220,73 +191,51 @@ export default function AuthForm({ onLogin, onRegister, isLoading }: AuthFormPro
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
                 onBlur={(e) => validateField('password', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${
-                  getFieldError('password') ? 'border-red-300' : 'border-gray-300'
-                }`}
+                error={getFieldError('password') || undefined}
                 placeholder={isLoginMode ? 'Uw wachtwoord' : 'Minimaal 8 karakters, letter en cijfer'}
                 minLength={isLoginMode ? undefined : 8}
               />
-              {getFieldError('password') && (
-                <p className="mt-1 text-sm text-red-600">{getFieldError('password')}</p>
-              )}
-            </div>
 
-            {!isLoginMode && (
-              <div>
-                <label htmlFor="rol" className="block text-sm font-medium text-gray-700 mb-1">
-                  Uw rol *
-                </label>
-                <select
-                  id="rol"
+              {!isLoginMode && (
+                <Select
+                  label="Uw rol"
                   name="rol"
                   value={formData.rol}
                   onChange={(e) => handleInputChange('rol', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  helperText="Ouders kunnen baby data invoeren, kraamhulp kan alles beheren"
                 >
                   <option value="ouders">Ouder(s)</option>
                   <option value="kraamhulp">Kraamhulp</option>
-                </select>
-                <p className="mt-1 text-xs text-gray-500">
-                  Ouders kunnen baby data invoeren, kraamhulp kan alles beheren
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Bezig...
-                </div>
-              ) : (
-                isLoginMode ? 'Inloggen' : 'Account aanmaken'
+                </Select>
               )}
-            </button>
-          </div>
+            </div>
 
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setIsLoginMode(!isLoginMode);
-                setError(null);
-                setFormData(prev => ({ ...prev, naam: '', password: '' }));
-              }}
-              className="text-sm text-indigo-600 hover:text-indigo-500"
+            <Button
+              type="submit"
+              loading={isLoading}
+              fullWidth
             >
-              {isLoginMode 
-                ? 'Nog geen account? Registreer hier' 
-                : 'Al een account? Log hier in'
-              }
-            </button>
-          </div>
-        </form>
+              {isLoginMode ? 'Inloggen' : 'Account aanmaken'}
+            </Button>
+
+            <div className="text-center">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setIsLoginMode(!isLoginMode);
+                  setError(null);
+                  setFormData(prev => ({ ...prev, naam: '', password: '' }));
+                }}
+              >
+                {isLoginMode 
+                  ? 'Nog geen account? Registreer hier' 
+                  : 'Al een account? Log hier in'
+                }
+              </Button>
+            </div>
+          </form>
+        </Card>
       </div>
     </div>
   );
