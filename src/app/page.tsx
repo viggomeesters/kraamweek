@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { AppData, BabyRecord, MotherRecord } from '@/types';
 import { DataService } from '@/lib/dataService';
 import { useAuth } from '@/contexts/AuthContext';
-import BottomNav from '@/components/BottomNav';
+import TopNav from '@/components/TopNav';
+import MainNav from '@/components/MainNav';
+import HamburgerMenu from '@/components/HamburgerMenu';
 import Profile from '@/components/Profile';
 import Overview from '@/components/Overview';
 import LoggingGallery from '@/components/LoggingGallery';
@@ -22,13 +24,15 @@ import { setupGlobalErrorHandling, ErrorLoggingService } from '@/lib/errorLoggin
 
 export default function Home() {
   const { user, isLoading: authLoading, isAuthenticated, login, register, logout, updateProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'overview' | 'logging' | 'analytics' | 'user'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'overview' | 'logging' | 'analytics'>('profile');
   const [data, setData] = useState<AppData>(DataService.loadData());
   const [isLoading, setIsLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showFeedbackDashboard, setShowFeedbackDashboard] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [toast, setToast] = useState<{ isVisible: boolean; message: string; type?: 'success' | 'error' | 'info' }>({
     isVisible: false,
     message: '',
@@ -84,6 +88,7 @@ export default function Home() {
 
   const handleShowHelp = () => {
     setShowHelp(true);
+    setIsMenuOpen(false);
     // Log help access
     const errorLogger = ErrorLoggingService.getInstance();
     errorLogger.logUserAction('help_opened', 'Help', {}, user?.id);
@@ -95,6 +100,7 @@ export default function Home() {
 
   const handleShowFeedback = () => {
     setShowFeedbackModal(true);
+    setIsMenuOpen(false);
     // Log feedback modal access
     const errorLogger = ErrorLoggingService.getInstance();
     errorLogger.logUserAction('feedback_modal_opened', 'FeedbackModal', {}, user?.id);
@@ -113,6 +119,7 @@ export default function Home() {
 
   const handleShowFeedbackDashboard = () => {
     setShowFeedbackDashboard(true);
+    setIsMenuOpen(false);
     // Log dashboard access
     const errorLogger = ErrorLoggingService.getInstance();
     errorLogger.logUserAction('feedback_dashboard_opened', 'FeedbackDashboard', {}, user?.id);
@@ -120,6 +127,23 @@ export default function Home() {
 
   const handleHideFeedbackDashboard = () => {
     setShowFeedbackDashboard(false);
+  };
+
+  const handleShowUserProfile = () => {
+    setShowUserProfile(true);
+    setIsMenuOpen(false);
+  };
+
+  const handleHideUserProfile = () => {
+    setShowUserProfile(false);
+  };
+
+  const handleMenuToggle = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const handleMenuClose = () => {
+    setIsMenuOpen(false);
   };
 
   const handleAddBabyRecord = (record: Omit<BabyRecord, 'id'>) => {
@@ -200,22 +224,66 @@ export default function Home() {
     );
   }
 
+  // Show user profile screen
+  if (showUserProfile) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <TopNav 
+          title="Account" 
+          onMenuClick={handleMenuToggle}
+          showBackButton={true}
+          onBackClick={handleHideUserProfile}
+        />
+        <div className="pt-16 p-4">
+          <div className="max-w-md mx-auto">
+            <UserProfile 
+              user={user!}
+              onLogout={logout}
+              onProfileUpdate={updateProfile}
+              onShowFeedbackDashboard={user?.rol === 'kraamhulp' ? handleShowFeedbackDashboard : undefined}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Show feedback dashboard for kraamhulp
   if (showFeedbackDashboard) {
     return (
-      <FeedbackDashboard 
-        onBack={handleHideFeedbackDashboard}
-      />
+      <div className="min-h-screen bg-gray-50">
+        <TopNav 
+          title="Feedback Dashboard" 
+          onMenuClick={handleMenuToggle}
+          showBackButton={true}
+          onBackClick={handleHideFeedbackDashboard}
+        />
+        <div className="pt-16">
+          <FeedbackDashboard 
+            onBack={handleHideFeedbackDashboard}
+          />
+        </div>
+      </div>
     );
   }
 
   // Show help screen
   if (showHelp) {
     return (
-      <Help 
-        onBack={handleHideHelp}
-        userRole={user?.rol}
-      />
+      <div className="min-h-screen bg-gray-50">
+        <TopNav 
+          title="Help & FAQ" 
+          onMenuClick={handleMenuToggle}
+          showBackButton={true}
+          onBackClick={handleHideHelp}
+        />
+        <div className="pt-16">
+          <Help 
+            onBack={handleHideHelp}
+            userRole={user?.rol}
+          />
+        </div>
+      </div>
     );
   }
 
@@ -233,38 +301,35 @@ export default function Home() {
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'profile':
-        return <Profile profile={data.babyProfile} onProfileUpdate={refreshData} />;
+        return (
+          <div className="pt-16">
+            <Profile profile={data.babyProfile} onProfileUpdate={refreshData} />
+          </div>
+        );
       case 'overview':
-        return <Overview data={data} />;
+        return (
+          <div className="pt-16">
+            <Overview data={data} />
+          </div>
+        );
       case 'logging':
         return (
-          <LoggingGallery
-            onAddBabyRecord={handleAddBabyRecord}
-            onAddMotherRecord={handleAddMotherRecord}
-            onSuccess={showToast}
-          />
+          <div className="pt-16">
+            <LoggingGallery
+              onAddBabyRecord={handleAddBabyRecord}
+              onAddMotherRecord={handleAddMotherRecord}
+              onSuccess={showToast}
+            />
+          </div>
         );
       case 'analytics':
         return (
-          <div className="p-4 pb-24">
+          <div className="pt-16 p-4 pb-24">
             <div className="max-w-md mx-auto">
               <h1 className="text-2xl font-bold text-gray-900 mb-6">Analytics & Trends</h1>
               <AnalyticsSection 
                 babyRecords={data.babyRecords} 
                 motherRecords={data.motherRecords} 
-              />
-            </div>
-          </div>
-        );
-      case 'user':
-        return (
-          <div className="p-4 pb-24">
-            <div className="max-w-md mx-auto">
-              <UserProfile 
-                user={user!}
-                onLogout={logout}
-                onProfileUpdate={updateProfile}
-                onShowFeedbackDashboard={user?.rol === 'kraamhulp' ? handleShowFeedbackDashboard : undefined}
               />
             </div>
           </div>
@@ -277,12 +342,22 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       <OfflineIndicator />
+      <TopNav 
+        title="Kraamweek" 
+        onMenuClick={handleMenuToggle}
+      />
       {renderActiveTab()}
-      <BottomNav 
+      <MainNav 
         activeTab={activeTab} 
         onTabChange={setActiveTab} 
+      />
+      <HamburgerMenu
+        isOpen={isMenuOpen}
+        onClose={handleMenuClose}
         onHelpClick={handleShowHelp}
         onFeedbackClick={handleShowFeedback}
+        onAccountClick={handleShowUserProfile}
+        userRole={user?.rol}
       />
       <InstallPrompt 
         onInstall={() => showToast('App succesvol geïnstalleerd!', 'success')}
