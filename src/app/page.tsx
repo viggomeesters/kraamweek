@@ -16,6 +16,8 @@ import Onboarding from '@/components/Onboarding';
 import Help from '@/components/Help';
 import FeedbackModal from '@/components/FeedbackModal';
 import FeedbackDashboard from '@/components/FeedbackDashboard';
+import InstallPrompt from '@/components/InstallPrompt';
+import OfflineIndicator from '@/components/OfflineIndicator';
 import { setupGlobalErrorHandling, ErrorLoggingService } from '@/lib/errorLoggingService';
 
 export default function Home() {
@@ -274,12 +276,17 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <OfflineIndicator />
       {renderActiveTab()}
       <BottomNav 
         activeTab={activeTab} 
         onTabChange={setActiveTab} 
         onHelpClick={handleShowHelp}
         onFeedbackClick={handleShowFeedback}
+      />
+      <InstallPrompt 
+        onInstall={() => showToast('App succesvol geïnstalleerd!', 'success')}
+        onDismiss={() => showToast('Je kunt de app later nog steeds installeren via het menu.', 'info')}
       />
       <Toast 
         message={toast.message}
