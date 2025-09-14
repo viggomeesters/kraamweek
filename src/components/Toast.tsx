@@ -38,26 +38,26 @@ export default function Toast({
       case 'success':
         return {
           icon: '✅',
-          bgColor: 'bg-green-500',
-          borderColor: 'border-green-400'
+          bgColor: 'bg-success-500',
+          borderColor: 'border-success-400'
         };
       case 'error':
         return {
           icon: '❌',
-          bgColor: 'bg-red-500',
-          borderColor: 'border-red-400'
+          bgColor: 'bg-error-500',
+          borderColor: 'border-error-400'
         };
       case 'info':
         return {
           icon: 'ℹ️',
-          bgColor: 'bg-blue-500',
-          borderColor: 'border-blue-400'
+          bgColor: 'bg-info-500',
+          borderColor: 'border-info-400'
         };
       default:
         return {
           icon: '✅',
-          bgColor: 'bg-green-500',
-          borderColor: 'border-green-400'
+          bgColor: 'bg-success-500',
+          borderColor: 'border-success-400'
         };
     }
   };

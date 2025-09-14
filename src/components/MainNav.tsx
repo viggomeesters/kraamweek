@@ -22,7 +22,7 @@ export default function MainNav({ activeTab, onTabChange }: MainNavProps) {
             onClick={() => onTabChange(item.id)}
             className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors duration-200 rounded-lg mx-1 min-h-[3.5rem] touch-manipulation ${
               activeTab === item.id
-                ? 'text-indigo-600 bg-indigo-50'
+                ? 'text-primary-600 bg-primary-50'
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 active:bg-gray-100'
             }`}
           >
