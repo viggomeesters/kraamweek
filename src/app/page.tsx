@@ -12,12 +12,16 @@ import { AnalyticsSection } from '@/components/Analytics';
 import Toast from '@/components/Toast';
 import AuthForm from '@/components/AuthForm';
 import UserProfile from '@/components/UserProfile';
+import Onboarding from '@/components/Onboarding';
+import Help from '@/components/Help';
 
 export default function Home() {
   const { user, isLoading: authLoading, isAuthenticated, login, register, logout, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'overview' | 'logging' | 'analytics' | 'user'>('profile');
   const [data, setData] = useState<AppData>(DataService.loadData());
   const [isLoading, setIsLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [toast, setToast] = useState<{ isVisible: boolean; message: string; type?: 'success' | 'error' | 'info' }>({
     isVisible: false,
     message: '',
@@ -28,6 +32,15 @@ export default function Home() {
     // Load initial data when user changes
     if (user) {
       setData(DataService.loadData());
+      
+      // Check if user needs onboarding (first time user with no baby profile)
+      const userData = DataService.loadData();
+      const hasProfile = !!userData.babyProfile;
+      const hasSeenOnboarding = localStorage.getItem('kraamweek-onboarding-completed') === 'true';
+      
+      if (!hasProfile && !hasSeenOnboarding) {
+        setShowOnboarding(true);
+      }
     }
     setIsLoading(false);
   }, [user]);
@@ -42,6 +55,20 @@ export default function Home() {
 
   const hideToast = () => {
     setToast(prev => ({ ...prev, isVisible: false }));
+  };
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('kraamweek-onboarding-completed', 'true');
+    setShowOnboarding(false);
+    showToast('Welkom bij Kraamweek App! Begin met het aanmaken van een baby profiel.', 'info');
+  };
+
+  const handleShowHelp = () => {
+    setShowHelp(true);
+  };
+
+  const handleHideHelp = () => {
+    setShowHelp(false);
   };
 
   const handleAddBabyRecord = (record: Omit<BabyRecord, 'id'>) => {
@@ -67,6 +94,26 @@ export default function Home() {
           <p className="text-gray-600">Laden...</p>
         </div>
       </div>
+    );
+  }
+
+  // Show onboarding for new users
+  if (isAuthenticated && showOnboarding) {
+    return (
+      <Onboarding 
+        onComplete={handleOnboardingComplete}
+        userRole={user?.rol || 'ouders'}
+      />
+    );
+  }
+
+  // Show help screen
+  if (showHelp) {
+    return (
+      <Help 
+        onBack={handleHideHelp}
+        userRole={user?.rol}
+      />
     );
   }
 
@@ -127,7 +174,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       {renderActiveTab()}
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} onHelpClick={handleShowHelp} />
       <Toast 
         message={toast.message}
         type={toast.type}
