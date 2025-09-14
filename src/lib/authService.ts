@@ -2,10 +2,19 @@ import { supabase } from './supabase';
 import { User, LoginCredentials, RegisterData } from '@/types';
 
 export class AuthService {
+  private static getSupabase() {
+    if (!supabase) {
+      throw new Error('Database not configured');
+    }
+    return supabase;
+  }
+
   // Register a new user
   static async register(data: RegisterData): Promise<{ user: User | null; error: string | null }> {
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const client = this.getSupabase();
+      
+      const { data: authData, error: authError } = await client.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
@@ -22,7 +31,7 @@ export class AuthService {
 
       if (authData.user) {
         // Create user profile in our users table
-        const { error: profileError } = await supabase
+        const { error: profileError } = await this.getSupabase()
           .from('users')
           .insert([
             {
@@ -62,7 +71,7 @@ export class AuthService {
   // Login user
   static async login(credentials: LoginCredentials): Promise<{ user: User | null; error: string | null }> {
     try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: authError } = await this.getSupabase().auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
       });
@@ -73,7 +82,7 @@ export class AuthService {
 
       if (authData.user) {
         // Get user profile from our users table
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile, error: profileError } = await this.getSupabase()
           .from('users')
           .select('*')
           .eq('id', authData.user.id)
@@ -92,7 +101,7 @@ export class AuthService {
             profile_completed: false,
           };
 
-          await supabase.from('users').insert([newProfile]);
+          await this.getSupabase().from('users').insert([newProfile]);
           
           const user: User = {
             id: authData.user.id,
@@ -107,7 +116,7 @@ export class AuthService {
         }
 
         // Update last login time
-        await supabase
+        await this.getSupabase()
           .from('users')
           .update({ last_login_at: new Date().toISOString() })
           .eq('id', authData.user.id);
@@ -135,7 +144,7 @@ export class AuthService {
   // Logout user
   static async logout(): Promise<{ error: string | null }> {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await this.getSupabase().auth.signOut();
       if (error) {
         return { error: error.message };
       }
@@ -149,7 +158,7 @@ export class AuthService {
   // Get current user
   static async getCurrentUser(): Promise<{ user: User | null; error: string | null }> {
     try {
-      const { data: authData, error: authError } = await supabase.auth.getUser();
+      const { data: authData, error: authError } = await this.getSupabase().auth.getUser();
 
       if (authError) {
         return { user: null, error: authError.message };
@@ -160,7 +169,7 @@ export class AuthService {
       }
 
       // Get user profile from our users table
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile, error: profileError } = await this.getSupabase()
         .from('users')
         .select('*')
         .eq('id', authData.user.id)
@@ -197,7 +206,7 @@ export class AuthService {
       if (updates.rol !== undefined) updateData.rol = updates.rol;
       if (updates.profileCompleted !== undefined) updateData.profile_completed = updates.profileCompleted;
 
-      const { error } = await supabase
+      const { error } = await this.getSupabase()
         .from('users')
         .update(updateData)
         .eq('id', userId);
@@ -220,7 +229,7 @@ export class AuthService {
 
   // Setup auth state change listener
   static onAuthStateChange(callback: (user: User | null) => void) {
-    return supabase.auth.onAuthStateChange(async (event, session) => {
+    return this.getSupabase().auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         const { user } = await this.getCurrentUser();
         callback(user);

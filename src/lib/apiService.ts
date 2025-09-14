@@ -2,6 +2,12 @@ import { supabase, isSupabaseConfigured } from './supabase';
 import { BabyRecord, MotherRecord, Task, Alert, BabyProfile, FamilyObservation, AppData } from '@/types';
 
 export class ApiService {
+  private static getSupabase() {
+    if (!isSupabaseConfigured() || !supabase) {
+      throw new Error('Database not configured');
+    }
+    return supabase;
+  }
   // Helper to transform database records to frontend types
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private static transformBabyRecord(dbRecord: any): BabyRecord {
@@ -117,11 +123,9 @@ export class ApiService {
 
   // Baby Records
   static async getBabyRecords(userId?: string): Promise<BabyRecord[]> {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Database not configured');
-    }
+    const client = this.getSupabase();
     
-    let query = supabase
+    let query = client
       .from('baby_records')
       .select('*')
       .order('timestamp', { ascending: false });
@@ -154,7 +158,7 @@ export class ApiService {
       note_category: record.noteCategory,
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await this.getSupabase()
       .from('baby_records')
       .insert(dbRecord)
       .select()
@@ -166,7 +170,9 @@ export class ApiService {
 
   // Mother Records
   static async getMotherRecords(userId?: string): Promise<MotherRecord[]> {
-    let query = supabase
+    const client = this.getSupabase();
+    
+    let query = client
       .from('mother_records')
       .select('*')
       .order('timestamp', { ascending: false });
@@ -195,7 +201,7 @@ export class ApiService {
       mood: record.mood,
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await this.getSupabase()
       .from('mother_records')
       .insert(dbRecord)
       .select()
@@ -207,7 +213,7 @@ export class ApiService {
 
   // Baby Profile
   static async getBabyProfile(): Promise<BabyProfile | null> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getSupabase()
       .from('baby_profiles')
       .select('*')
       .order('created_at', { ascending: false })
@@ -245,7 +251,7 @@ export class ApiService {
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await this.getSupabase()
       .from('baby_profiles')
       .upsert(dbProfile)
       .select()
@@ -256,7 +262,7 @@ export class ApiService {
   }
 
   static async deleteBabyProfile(): Promise<void> {
-    const { error } = await supabase
+    const { error } = await this.getSupabase()
       .from('baby_profiles')
       .delete()
       .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
@@ -266,7 +272,7 @@ export class ApiService {
 
   // Tasks
   static async getTasks(): Promise<Task[]> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getSupabase()
       .from('tasks')
       .select('*')
       .order('created_at', { ascending: false });
@@ -289,7 +295,7 @@ export class ApiService {
       created_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await this.getSupabase()
       .from('tasks')
       .insert(dbTask)
       .select()
@@ -307,7 +313,7 @@ export class ApiService {
     if (updates.status !== undefined) dbUpdates.status = updates.status;
     if (updates.completedAt !== undefined) dbUpdates.completed_at = updates.completedAt;
 
-    const { data, error } = await supabase
+    const { data, error } = await this.getSupabase()
       .from('tasks')
       .update(dbUpdates)
       .eq('id', id)
@@ -320,7 +326,7 @@ export class ApiService {
 
   // Alerts
   static async getAlerts(): Promise<Alert[]> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getSupabase()
       .from('alerts')
       .select('*')
       .order('timestamp', { ascending: false });
@@ -342,7 +348,7 @@ export class ApiService {
       resolution_comment: alert.resolutionComment,
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await this.getSupabase()
       .from('alerts')
       .insert(dbAlert)
       .select()
@@ -354,7 +360,7 @@ export class ApiService {
 
   // Family Observations
   static async getFamilyObservations(): Promise<FamilyObservation[]> {
-    const { data, error } = await supabase
+    const { data, error } = await this.getSupabase()
       .from('family_observations')
       .select('*')
       .order('timestamp', { ascending: false });
@@ -373,7 +379,7 @@ export class ApiService {
       recommendations: observation.recommendations,
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await this.getSupabase()
       .from('family_observations')
       .insert(dbObservation)
       .select()
@@ -407,12 +413,12 @@ export class ApiService {
   // Clear all data
   static async clearAllData(): Promise<void> {
     await Promise.all([
-      supabase.from('baby_records').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-      supabase.from('mother_records').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-      supabase.from('tasks').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-      supabase.from('alerts').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-      supabase.from('family_observations').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-      supabase.from('baby_profiles').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+      this.getSupabase().from('baby_records').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+      this.getSupabase().from('mother_records').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+      this.getSupabase().from('tasks').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+      this.getSupabase().from('alerts').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+      this.getSupabase().from('family_observations').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+      this.getSupabase().from('baby_profiles').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
     ]);
   }
 }
