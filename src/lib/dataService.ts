@@ -1,4 +1,5 @@
 import { AppData, BabyRecord, MotherRecord, FamilyObservation, Task, Alert, BabyProfile } from '@/types';
+import NotificationService from '@/lib/notificationService';
 
 const STORAGE_KEY = 'kraamweek-data';
 
@@ -162,6 +163,9 @@ export class DataService {
     
     data.alerts.push(newAlert);
     this.saveData(data);
+    
+    // Send push notification for alerts
+    this.sendAlertNotification(newAlert);
     
     return newAlert;
   }
@@ -533,5 +537,68 @@ export class DataService {
     });
     
     return result.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  // Send notification for alerts
+  private static async sendAlertNotification(alert: Alert): Promise<void> {
+    try {
+      // Only send notifications for warnings and critical alerts
+      if (alert.type === 'info') return;
+
+      // Determine notification category and format message
+      let category: 'healthAlerts' | 'temperatureAlerts' | 'emergencyAlerts' = 'healthAlerts';
+      let title = '⚠️ Gezondheidsalert';
+      
+      if (alert.message.includes('temperatuur')) {
+        category = 'temperatureAlerts';
+        title = '🌡️ Temperatuur waarschuwing';
+      }
+      
+      if (alert.type === 'critical') {
+        category = 'emergencyAlerts';
+        title = '🚨 Kritieke waarschuwing';
+      }
+
+      // Send the notification
+      await NotificationService.sendNotification({
+        title,
+        body: alert.message,
+        category,
+        priority: alert.type === 'critical' ? 'critical' : 'high',
+        tag: `alert-${alert.id}`,
+        data: { 
+          alertId: alert.id, 
+          recordId: alert.relatedRecordId,
+          type: 'health_alert',
+          category: alert.category 
+        },
+        actions: [
+          { action: 'view_alert', title: 'Bekijk details' },
+          { action: 'acknowledge', title: 'Bevestigen' },
+          { action: 'close', title: 'Sluiten' }
+        ],
+      });
+    } catch (error) {
+      console.error('Failed to send alert notification:', error);
+      // Don't throw - notification failure shouldn't break data saving
+    }
+  }
+
+  // Send feeding reminder notification
+  static async sendFeedingReminder(): Promise<void> {
+    try {
+      await NotificationService.sendFeedingReminder();
+    } catch (error) {
+      console.error('Failed to send feeding reminder:', error);
+    }
+  }
+
+  // Send task reminder notification
+  static async sendTaskReminder(task: Task): Promise<void> {
+    try {
+      await NotificationService.sendTaskReminder(task.title, task.id);
+    } catch (error) {
+      console.error('Failed to send task reminder:', error);
+    }
   }
 }
