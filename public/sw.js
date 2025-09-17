@@ -175,18 +175,29 @@ self.addEventListener('sync', (event) => {
   }
 });
 
-// Push notification support (for future use)
+// Push notification support with enhanced handling
 self.addEventListener('push', (event) => {
   console.log('Service Worker: Push received');
   
-  const options = {
-    body: event.data ? event.data.text() : 'Nieuwe melding van Kraamweek App',
+  let notificationData = {};
+  
+  try {
+    if (event.data) {
+      notificationData = event.data.json();
+    }
+  } catch (error) {
+    console.log('Service Worker: Failed to parse push data', error);
+  }
+  
+  const defaultOptions = {
+    body: 'Nieuwe melding van Kraamweek App',
     icon: '/icons/icon-192x192.svg',
     badge: '/icons/icon-72x72.svg',
     vibrate: [200, 100, 200],
     data: {
       dateOfArrival: Date.now(),
-      primaryKey: 1
+      primaryKey: Math.random().toString(36).substr(2, 9),
+      ...notificationData.data
     },
     actions: [
       {
@@ -201,20 +212,123 @@ self.addEventListener('push', (event) => {
     ]
   };
 
+  const options = {
+    ...defaultOptions,
+    ...notificationData,
+    data: {
+      ...defaultOptions.data,
+      ...notificationData.data
+    }
+  };
+
+  // Add category-specific actions
+  if (notificationData.category) {
+    switch (notificationData.category) {
+      case 'feedingReminders':
+        options.actions = [
+          { action: 'log_feeding', title: 'Voeding registreren', icon: '/icons/icon-96x96.svg' },
+          { action: 'snooze_feeding', title: 'Uitstellen (30 min)', icon: '/icons/icon-96x96.svg' },
+          { action: 'close', title: 'Sluiten' }
+        ];
+        break;
+      case 'healthAlerts':
+        options.actions = [
+          { action: 'view_alert', title: 'Bekijk details', icon: '/icons/icon-96x96.svg' },
+          { action: 'acknowledge', title: 'Bevestigen', icon: '/icons/icon-96x96.svg' },
+          { action: 'close', title: 'Sluiten' }
+        ];
+        break;
+      case 'taskReminders':
+        options.actions = [
+          { action: 'complete_task', title: 'Markeer als voltooid', icon: '/icons/icon-96x96.svg' },
+          { action: 'snooze_task', title: 'Uitstellen (1 uur)', icon: '/icons/icon-96x96.svg' },
+          { action: 'close', title: 'Sluiten' }
+        ];
+        break;
+      case 'emergencyAlerts':
+        options.actions = [
+          { action: 'view_emergency', title: 'Bekijk details', icon: '/icons/icon-96x96.svg' },
+          { action: 'call_help', title: 'Bel hulp', icon: '/icons/icon-96x96.svg' },
+          { action: 'close', title: 'Sluiten' }
+        ];
+        options.requireInteraction = true;
+        break;
+    }
+  }
+
   event.waitUntil(
     self.registration.showNotification('Kraamweek App', options)
   );
 });
 
-// Notification click handling
+// Enhanced notification click handling
 self.addEventListener('notificationclick', (event) => {
-  console.log('Service Worker: Notification click received');
+  console.log('Service Worker: Notification click received', event.action);
   
   event.notification.close();
 
-  if (event.action === 'explore') {
-    event.waitUntil(
-      clients.openWindow('/')
-    );
+  const notificationData = event.notification.data || {};
+  
+  // Handle different actions
+  switch (event.action) {
+    case 'explore':
+    case 'view_alert':
+    case 'view_emergency':
+      event.waitUntil(
+        clients.openWindow('/')
+      );
+      break;
+      
+    case 'log_feeding':
+      event.waitUntil(
+        clients.openWindow('/?action=log_feeding')
+      );
+      break;
+      
+    case 'complete_task':
+      if (notificationData.taskId) {
+        event.waitUntil(
+          clients.openWindow(`/?action=complete_task&taskId=${notificationData.taskId}`)
+        );
+      }
+      break;
+      
+    case 'snooze_feeding':
+      // Handle snooze logic - could store in IndexedDB or send message to clients
+      console.log('Service Worker: Snoozing feeding reminder for 30 minutes');
+      break;
+      
+    case 'snooze_task':
+      // Handle task snooze
+      console.log('Service Worker: Snoozing task reminder for 1 hour');
+      break;
+      
+    case 'acknowledge':
+      // Handle alert acknowledgment
+      console.log('Service Worker: Acknowledging alert');
+      break;
+      
+    case 'call_help':
+      // Handle emergency call - could open tel: link
+      console.log('Service Worker: Emergency call requested');
+      break;
+      
+    case 'close':
+    default:
+      // Just close the notification - no action needed
+      break;
   }
+  
+  // Send message to open clients about the action
+  event.waitUntil(
+    clients.matchAll().then(clientsList => {
+      clientsList.forEach(client => {
+        client.postMessage({
+          type: 'NOTIFICATION_ACTION',
+          action: event.action,
+          data: notificationData
+        });
+      });
+    })
+  );
 });
